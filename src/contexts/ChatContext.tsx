@@ -95,10 +95,58 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const sendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
+    // Handle context-aware search markers
+    let displayContent = content;
+    let searchQuery = content;
+    
+    if (content === '__AUTO_SEARCH_CONTEXT__' || content === '__AUTO_SEARCH_WEAK_CLAIMS__') {
+      const isWeakClaimsSearch = content === '__AUTO_SEARCH_WEAK_CLAIMS__';
+      
+      // Build dynamic query from context
+      const queryParts: string[] = [];
+      
+      // Extract topic from draft
+      if (projectContext.draftText) {
+        const draftPreview = projectContext.draftText.substring(0, 300).trim();
+        queryParts.push(draftPreview);
+      }
+      
+      // Add weak claims for targeted search
+      if (isWeakClaimsSearch && projectContext.claims.length > 0) {
+        const weakClaims = projectContext.claims
+          .filter(c => c.status === 'unsupported' || c.status === 'partial')
+          .slice(0, 3)
+          .map(c => c.text);
+        if (weakClaims.length > 0) {
+          queryParts.push(...weakClaims);
+        }
+      }
+      
+      // Build the search query
+      searchQuery = queryParts.join(' ');
+      
+      // Create user-friendly display message
+      if (isWeakClaimsSearch) {
+        displayContent = language === 'fr'
+          ? 'Recherche d\'articles pour soutenir mes affirmations faibles...'
+          : 'Searching for articles to support my weak claims...';
+      } else if (projectContext.draftText) {
+        const topic = projectContext.draftText.substring(0, 100).trim();
+        displayContent = language === 'fr'
+          ? `Recherche d'articles académiques basée sur mon brouillon: "${topic}${projectContext.draftText.length > 100 ? '...' : ''}"`
+          : `Searching for academic articles based on my draft: "${topic}${projectContext.draftText.length > 100 ? '...' : ''}"`;
+      } else {
+        displayContent = language === 'fr'
+          ? 'Recherche d\'articles académiques pertinents...'
+          : 'Searching for relevant academic articles...';
+        searchQuery = language === 'fr' ? 'articles académiques recherche' : 'academic research articles';
+      }
+    }
+    
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content,
+      content: displayContent,
       timestamp: new Date(),
     };
 
@@ -144,12 +192,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            query: content,
+            query: searchQuery,
             language,
             context: {
-              draftTopic: projectContext.draftText.substring(0, 200),
+              draftTopic: projectContext.draftText.substring(0, 500),
               existingSources: projectContext.sources.map(s => s.title),
-              unsupportedClaims: unsupportedClaims.slice(0, 3),
+              unsupportedClaims: unsupportedClaims.slice(0, 5),
             },
           }),
         });
@@ -209,7 +257,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: [...chatHistory, { role: 'user', content }],
+          messages: [...chatHistory, { role: 'user', content: displayContent }],
           context: projectContext,
           language,
           action: action === 'research' ? 'research' : 'chat',

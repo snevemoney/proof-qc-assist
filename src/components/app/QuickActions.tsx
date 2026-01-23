@@ -15,9 +15,7 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
     {
       icon: GraduationCap,
       label: language === 'fr' ? 'Trouver des articles' : 'Find articles',
-      message: language === 'fr' 
-        ? 'Recherche des articles académiques pertinents pour mon sujet de recherche'
-        : 'Search for relevant academic articles for my research topic',
+      message: '__AUTO_SEARCH_CONTEXT__',
       action: 'find-sources' as const,
       requiresResults: false,
       primary: true,
@@ -34,9 +32,7 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
     {
       icon: Search,
       label: language === 'fr' ? 'Chercher pour affirmations faibles' : 'Search for weak claims',
-      message: language === 'fr'
-        ? 'Trouve des sources académiques pour soutenir mes affirmations non soutenues ou partiellement soutenues'
-        : 'Find academic sources to support my unsupported or partially supported claims',
+      message: '__AUTO_SEARCH_WEAK_CLAIMS__',
       action: 'find-sources' as const,
       requiresResults: true,
     },
