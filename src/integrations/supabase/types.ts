@@ -86,6 +86,50 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_history: {
+        Row: {
+          claims: Json
+          created_at: string | null
+          draft_text: string | null
+          id: string
+          project_id: string | null
+          sources_snapshot: Json | null
+          strict_mode: boolean | null
+          summary: Json | null
+          user_id: string
+        }
+        Insert: {
+          claims?: Json
+          created_at?: string | null
+          draft_text?: string | null
+          id?: string
+          project_id?: string | null
+          sources_snapshot?: Json | null
+          strict_mode?: boolean | null
+          summary?: Json | null
+          user_id: string
+        }
+        Update: {
+          claims?: Json
+          created_at?: string | null
+          draft_text?: string | null
+          id?: string
+          project_id?: string | null
+          sources_snapshot?: Json | null
+          strict_mode?: boolean | null
+          summary?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
