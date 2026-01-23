@@ -62,7 +62,8 @@ const translations = {
     'report.exportPdf': 'Export PDF',
     'report.copyMarkdown': 'Copy Markdown',
     'report.claimAnalysis': 'Claim-by-Claim Analysis',
-    'report.askAboutClaim': 'Ask AI about this claim',
+    'report.askAboutClaim': 'Ask AI',
+    'report.findArticles': 'Find articles',
     
     // Chat
     'chat.title': 'ProofCheck Assistant',
@@ -132,6 +133,7 @@ const translations = {
     'report.copyMarkdown': 'Copier Markdown',
     'report.claimAnalysis': 'Analyse affirmation par affirmation',
     'report.askAboutClaim': 'Demander à l\'IA',
+    'report.findArticles': 'Trouver des articles',
     
     // Chat
     'chat.title': 'Assistant ProofCheck',
