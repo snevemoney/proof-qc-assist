@@ -70,7 +70,8 @@ export const ChatPanel = () => {
         </Button>
       )}
 
-      <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
+      {isPanelOpen && (
+        <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
         <SheetContent side="right" className="w-full sm:w-[440px] p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -107,7 +108,7 @@ export const ChatPanel = () => {
             </div>
           </SheetHeader>
 
-          <ScrollArea className="flex-1" ref={scrollRef}>
+          <ScrollArea className="flex-1" viewportRef={scrollRef}>
             {messages.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
                 <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary/50" />
@@ -185,7 +186,8 @@ export const ChatPanel = () => {
             </div>
           </form>
         </SheetContent>
-      </Sheet>
+        </Sheet>
+      )}
     </>
   );
 };
