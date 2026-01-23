@@ -12,6 +12,7 @@ import { verifyClaims, type Source } from '@/lib/verification';
 import { useToast } from '@/hooks/use-toast';
 import { useProject } from '@/hooks/useProject';
 import { useVerificationHistory, VerificationHistoryEntry } from '@/hooks/useVerificationHistory';
+import { useSavedDrafts } from '@/hooks/useSavedDrafts';
 
 const ProjectWorkspaceContent = () => {
   const { t, language } = useLanguage();
@@ -41,6 +42,7 @@ const ProjectWorkspaceContent = () => {
   } = useProject();
 
   const { history, isLoading: historyLoading, saveToHistory, deleteFromHistory } = useVerificationHistory();
+  const { savedDrafts, isLoading: savedDraftsLoading, saveDraft, deleteDraft } = useSavedDrafts();
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Sync project context with chat
@@ -195,6 +197,10 @@ const ProjectWorkspaceContent = () => {
               isVerifying={isVerifying}
               strictMode={strictMode}
               onStrictModeChange={setStrictMode}
+              savedDrafts={savedDrafts}
+              savedDraftsLoading={savedDraftsLoading}
+              onSaveDraft={saveDraft}
+              onDeleteDraft={deleteDraft}
             />
           </TabsContent>
 
