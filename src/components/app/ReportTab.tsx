@@ -1,10 +1,26 @@
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useChat } from '@/contexts/ChatContext';
 import type { Claim, VerificationSummary } from '@/lib/verification';
+import type { VerificationHistoryEntry } from '@/hooks/useVerificationHistory';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { fr, enUS } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type ClaimStatus = 'supported' | 'partial' | 'unsupported' | 'contradicted';
 
@@ -14,6 +30,10 @@ interface ReportTabProps {
   summary: VerificationSummary | null;
   sourcesCount: number;
   draftLength: number;
+  history: VerificationHistoryEntry[];
+  historyLoading: boolean;
+  onRestoreHistory: (entry: VerificationHistoryEntry) => void;
+  onDeleteHistory: (id: string) => void;
 }
 
 const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass: string; labelEn: string; labelFr: string }> = {
@@ -28,45 +48,181 @@ const getStatusConfig = (status: string) => {
   return statusConfig[status as ClaimStatus] || statusConfig['unsupported'];
 };
 
-export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLength }: ReportTabProps) => {
+export const ReportTab = ({ 
+  hasVerified, 
+  claims, 
+  summary, 
+  sourcesCount, 
+  draftLength,
+  history,
+  historyLoading,
+  onRestoreHistory,
+  onDeleteHistory,
+}: ReportTabProps) => {
   const { t, language } = useLanguage();
   const { askAboutClaim } = useChat();
+  const locale = language === 'fr' ? fr : enUS;
+
+  const getStatusSummary = (entry: VerificationHistoryEntry) => {
+    const total = entry.claims.length;
+    const supported = entry.claims.filter(c => c.status === 'supported').length;
+    return `${supported}/${total}`;
+  };
+
+  const renderHistorySection = () => (
+    <Card className="mt-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <History className="h-5 w-5" />
+          {language === 'fr' ? 'Historique des vérifications' : 'Verification History'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {historyLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : history.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">
+              {language === 'fr' ? 'Aucun historique disponible' : 'No history available'}
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="max-h-[300px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{language === 'fr' ? 'Date' : 'Date'}</TableHead>
+                  <TableHead>{language === 'fr' ? 'Brouillon' : 'Draft'}</TableHead>
+                  <TableHead>{language === 'fr' ? 'Statut' : 'Status'}</TableHead>
+                  <TableHead className="text-right">{language === 'fr' ? 'Actions' : 'Actions'}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {history.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell className="whitespace-nowrap">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        {format(entry.createdAt, 'PP', { locale })}
+                        <span className="text-muted-foreground text-xs">
+                          {format(entry.createdAt, 'p', { locale })}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[200px]">
+                      <p className="truncate text-sm">
+                        {entry.draftText.slice(0, 50)}{entry.draftText.length > 50 ? '...' : ''}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1 text-success" />
+                          {getStatusSummary(entry)}
+                        </Badge>
+                        {entry.strictMode && (
+                          <Badge variant="secondary" className="text-xs">
+                            {language === 'fr' ? 'Strict' : 'Strict'}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRestoreHistory(entry)}
+                          className="h-8 px-2"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          {language === 'fr' ? 'Restaurer' : 'Restore'}
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                {language === 'fr' ? 'Supprimer cette entrée?' : 'Delete this entry?'}
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {language === 'fr'
+                                  ? 'Cette action est irréversible.'
+                                  : 'This action cannot be undone.'}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>
+                                {language === 'fr' ? 'Annuler' : 'Cancel'}
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => onDeleteHistory(entry.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {language === 'fr' ? 'Supprimer' : 'Delete'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   if (!hasVerified) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
-          <FileText className="h-8 w-8 text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            {t('report.empty.title')}
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-md mb-6">
+            {t('report.empty.description')}
+          </p>
+          
+          <div className="flex flex-col gap-2 text-sm">
+            <div className="flex items-center gap-2">
+              {sourcesCount > 0 ? (
+                <CheckCircle2 className="h-4 w-4 text-success" />
+              ) : (
+                <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+              )}
+              <span className={sourcesCount > 0 ? 'text-foreground' : 'text-muted-foreground'}>
+                {t('report.checklist.sources')} ({sourcesCount})
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {draftLength > 0 ? (
+                <CheckCircle2 className="h-4 w-4 text-success" />
+              ) : (
+                <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+              )}
+              <span className={draftLength > 0 ? 'text-foreground' : 'text-muted-foreground'}>
+                {t('report.checklist.draft')}
+              </span>
+            </div>
+          </div>
         </div>
-        <h3 className="text-lg font-medium text-foreground mb-2">
-          {t('report.empty.title')}
-        </h3>
-        <p className="text-sm text-muted-foreground max-w-md mb-6">
-          {t('report.empty.description')}
-        </p>
         
-        <div className="flex flex-col gap-2 text-sm">
-          <div className="flex items-center gap-2">
-            {sourcesCount > 0 ? (
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            ) : (
-              <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
-            )}
-            <span className={sourcesCount > 0 ? 'text-foreground' : 'text-muted-foreground'}>
-              {t('report.checklist.sources')} ({sourcesCount})
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {draftLength > 0 ? (
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            ) : (
-              <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
-            )}
-            <span className={draftLength > 0 ? 'text-foreground' : 'text-muted-foreground'}>
-              {t('report.checklist.draft')}
-            </span>
-          </div>
-        </div>
+        {/* Show history even when no current verification */}
+        {renderHistorySection()}
       </div>
     );
   }
@@ -206,6 +362,9 @@ export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLen
           )}
         </CardContent>
       </Card>
+
+      {/* History Section */}
+      {renderHistorySection()}
     </div>
   );
 };
