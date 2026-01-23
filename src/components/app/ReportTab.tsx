@@ -23,6 +23,11 @@ const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass:
   contradicted: { icon: XCircle, colorClass: 'text-destructive', labelEn: 'Contradicted', labelFr: 'Contredit' },
 };
 
+// Fallback for unknown statuses from AI
+const getStatusConfig = (status: string) => {
+  return statusConfig[status as ClaimStatus] || statusConfig['unsupported'];
+};
+
 export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLength }: ReportTabProps) => {
   const { t, language } = useLanguage();
   const { askAboutClaim } = useChat();
@@ -154,7 +159,7 @@ export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLen
             </p>
           ) : (
             claims.map((claim) => {
-              const config = statusConfig[claim.status];
+              const config = getStatusConfig(claim.status);
               const Icon = config.icon;
               const label = language === 'fr' ? config.labelFr : config.labelEn;
               

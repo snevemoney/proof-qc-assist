@@ -35,6 +35,7 @@ const ProjectWorkspaceContent = () => {
     setActiveTab,
     setStrictMode,
     setHasVerified,
+    updateStateImmediate,
   } = useProject();
 
   const [isVerifying, setIsVerifying] = useState(false);
@@ -67,13 +68,27 @@ const ProjectWorkspaceContent = () => {
   };
 
   const handleVerify = async () => {
+    console.log('handleVerify: Starting verification...');
     setIsVerifying(true);
     try {
+      console.log('handleVerify: Calling verifyClaims with', sources.length, 'sources');
       const result = await verifyClaims(sources, draftText, strictMode, language);
-      setClaims(result.claims);
-      setSummary(result.summary);
-      setHasVerified(true);
-      setActiveTab('report');
+      console.log('handleVerify: Got result:', result);
+      
+      // Validate result structure
+      if (!result || !Array.isArray(result.claims)) {
+        throw new Error('Invalid verification response structure');
+      }
+      
+      // Update all state at once and save immediately
+      await updateStateImmediate({
+        claims: result.claims,
+        summary: result.summary,
+        hasVerified: true,
+        activeTab: 'report',
+      });
+      
+      console.log('handleVerify: State updated and saved');
       
       toast({
         title: language === 'fr' ? 'Vérification terminée' : 'Verification complete',
@@ -82,7 +97,7 @@ const ProjectWorkspaceContent = () => {
           : `${result.claims.length} claims analyzed`,
       });
     } catch (error) {
-      console.error('Verification error:', error);
+      console.error('handleVerify: Error:', error);
       toast({
         title: language === 'fr' ? 'Erreur de vérification' : 'Verification error',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -90,6 +105,7 @@ const ProjectWorkspaceContent = () => {
       });
     } finally {
       setIsVerifying(false);
+      console.log('handleVerify: Finished');
     }
   };
 
