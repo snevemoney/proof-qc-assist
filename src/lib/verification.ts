@@ -55,10 +55,25 @@ export async function verifyClaims(
   });
 
   if (error) {
-    throw new Error(error.message || 'Verification failed');
+    // Try to extract a more specific error message
+    const errorMessage = error.message || '';
+    
+    if (errorMessage.includes('402') || errorMessage.includes('Payment')) {
+      throw new Error(language === 'fr' 
+        ? 'Crédits IA insuffisants. Veuillez réessayer plus tard ou contacter le support.'
+        : 'Insufficient AI credits. Please try again later or contact support.');
+    }
+    
+    if (errorMessage.includes('429') || errorMessage.includes('Rate')) {
+      throw new Error(language === 'fr'
+        ? 'Limite de requêtes atteinte. Veuillez patienter quelques minutes.'
+        : 'Rate limit exceeded. Please wait a few minutes.');
+    }
+    
+    throw new Error(errorMessage || (language === 'fr' ? 'La vérification a échoué' : 'Verification failed'));
   }
 
-  if (data.error) {
+  if (data?.error) {
     throw new Error(data.error);
   }
 

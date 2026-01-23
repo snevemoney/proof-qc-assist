@@ -109,7 +109,7 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v√
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: language === 'fr' ? systemPromptFR : systemPromptEN },
           { role: "user", content: userPrompt },
