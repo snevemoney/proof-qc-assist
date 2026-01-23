@@ -301,71 +301,77 @@ export const DraftTab = ({
       </div>
 
       {/* Save Draft Dialog */}
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('draft.saveCurrent')}</DialogTitle>
-            <DialogDescription>
-              {t('draft.draftNamePlaceholder')}
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            placeholder={t('draft.draftNamePlaceholder')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && draftName.trim()) {
-                handleSaveDraft();
-              }
-            }}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveDraft} disabled={!draftName.trim() || isSaving}>
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {saveDialogOpen && (
+        <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('draft.saveCurrent')}</DialogTitle>
+              <DialogDescription>
+                {t('draft.draftNamePlaceholder')}
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              placeholder={t('draft.draftNamePlaceholder')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && draftName.trim()) {
+                  handleSaveDraft();
+                }
+              }}
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveDraft} disabled={!draftName.trim() || isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Load Confirmation Dialog */}
-      <AlertDialog open={loadConfirmOpen} onOpenChange={setLoadConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('draft.confirmLoad')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('draft.confirmLoadDescription')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLoadDraft}>
-              {t('draft.loadDraft')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {loadConfirmOpen && (
+        <AlertDialog open={loadConfirmOpen} onOpenChange={setLoadConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('draft.confirmLoad')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('draft.confirmLoadDescription')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmLoadDraft}>
+                {t('draft.loadDraft')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('draft.confirmDelete')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('draft.confirmDeleteDescription')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t('draft.deleteDraft')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {deleteConfirmOpen && (
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('draft.confirmDelete')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('draft.confirmDeleteDescription')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {t('draft.deleteDraft')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };
