@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useLanguage } from './LanguageContext';
 import type { Source, Claim, VerificationSummary } from '@/lib/verification';
+import type { ArticleResult } from '@/components/app/ArticleSuggestionCard';
 
 export interface ChatMessage {
   id: string;
@@ -15,9 +16,11 @@ interface ChatContextType {
   isLoading: boolean;
   isPanelOpen: boolean;
   setIsPanelOpen: (open: boolean) => void;
-  sendMessage: (content: string, action?: 'chat' | 'research') => Promise<void>;
+  sendMessage: (content: string, action?: 'chat' | 'research' | 'find-sources') => Promise<void>;
   askAboutClaim: (claim: Claim) => void;
   clearMessages: () => void;
+  addedArticleIds: Set<string>;
+  addSourceFromSearch: (article: ArticleResult) => void;
   projectContext: {
     sources: Source[];
     draftText: string;
@@ -30,17 +33,22 @@ interface ChatContextType {
     claims: Claim[];
     summary: VerificationSummary | null;
   }) => void;
+  onAddSources?: (sources: Source[]) => void;
+  setOnAddSources: (callback: ((sources: Source[]) => void) | undefined) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/research-chat`;
+const SEARCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-articles`;
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { language, t } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [addedArticleIds, setAddedArticleIds] = useState<Set<string>>(new Set());
+  const [onAddSourcesCallback, setOnAddSourcesCallback] = useState<((sources: Source[]) => void) | undefined>();
   const [projectContext, setProjectContext] = useState<{
     sources: Source[];
     draftText: string;
@@ -53,7 +61,40 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     summary: null,
   });
 
-  const sendMessage = useCallback(async (content: string, action: 'chat' | 'research' = 'chat') => {
+  // Convert ArticleResult to Source
+  const articleToSource = useCallback((article: ArticleResult): Source => {
+    return {
+      id: article.id,
+      title: article.title,
+      authors: article.authors,
+      year: article.year,
+      journal: article.journal,
+      abstract: article.abstract,
+      content: article.abstract || '',
+      studyType: article.studyType,
+      studyTypeFr: article.studyTypeFr,
+      verificationStatus: article.verificationStatus,
+      verificationLinks: article.verificationLinks,
+      citationAPA: article.citationAPA,
+      keyFindings: article.keyFindings,
+      url: article.url,
+    };
+  }, []);
+
+  const addSourceFromSearch = useCallback((article: ArticleResult) => {
+    const source = articleToSource(article);
+    setAddedArticleIds(prev => new Set([...prev, article.id]));
+    
+    if (onAddSourcesCallback) {
+      onAddSourcesCallback([source]);
+    }
+  }, [articleToSource, onAddSourcesCallback]);
+
+  const setOnAddSources = useCallback((callback: ((sources: Source[]) => void) | undefined) => {
+    setOnAddSourcesCallback(() => callback);
+  }, []);
+
+  const sendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -89,6 +130,73 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     };
 
     try {
+      // If action is find-sources, first search for articles then stream a response
+      if (action === 'find-sources') {
+        // Search for articles
+        const unsupportedClaims = projectContext.claims
+          .filter(c => c.status === 'unsupported' || c.status === 'partial')
+          .map(c => c.text);
+        
+        const searchResp = await fetch(SEARCH_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            query: content,
+            language,
+            context: {
+              draftTopic: projectContext.draftText.substring(0, 200),
+              existingSources: projectContext.sources.map(s => s.title),
+              unsupportedClaims: unsupportedClaims.slice(0, 3),
+            },
+          }),
+        });
+
+        if (searchResp.ok) {
+          const searchData = await searchResp.json();
+          const articles = searchData.articles || [];
+          
+          if (articles.length > 0) {
+            // Format articles as JSON block in the message
+            const articlesJson = JSON.stringify({ articles }, null, 2);
+            const introText = language === 'fr'
+              ? `J'ai trouvé ${articles.length} articles académiques pertinents pour votre recherche:\n\n`
+              : `I found ${articles.length} relevant academic articles for your research:\n\n`;
+            
+            assistantContent = introText + `\`\`\`json\n${articlesJson}\n\`\`\``;
+            
+            setMessages(prev => [...prev, {
+              id: assistantId,
+              role: 'assistant',
+              content: assistantContent,
+              timestamp: new Date(),
+              isStreaming: false,
+            }]);
+            
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // If search failed or no results, fall back to regular chat
+        assistantContent = language === 'fr'
+          ? 'Je n\'ai pas pu trouver d\'articles pour cette recherche. Essayez de reformuler votre requête.'
+          : 'I couldn\'t find articles for this search. Try rephrasing your query.';
+        
+        setMessages(prev => [...prev, {
+          id: assistantId,
+          role: 'assistant',
+          content: assistantContent,
+          timestamp: new Date(),
+        }]);
+        
+        setIsLoading(false);
+        return;
+      }
+
+      // Regular chat or research flow
       const chatHistory = messages.map(m => ({
         role: m.role,
         content: m.content,
@@ -104,7 +212,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           messages: [...chatHistory, { role: 'user', content }],
           context: projectContext,
           language,
-          action,
+          action: action === 'research' ? 'research' : 'chat',
         }),
       });
 
@@ -206,6 +314,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const clearMessages = useCallback(() => {
     setMessages([]);
+    setAddedArticleIds(new Set());
   }, []);
 
   return (
@@ -217,8 +326,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       sendMessage,
       askAboutClaim,
       clearMessages,
+      addedArticleIds,
+      addSourceFromSearch,
       projectContext,
       setProjectContext,
+      onAddSources: onAddSourcesCallback,
+      setOnAddSources,
     }}>
       {children}
     </ChatContext.Provider>

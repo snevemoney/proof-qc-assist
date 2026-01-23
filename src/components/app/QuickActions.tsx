@@ -1,9 +1,9 @@
-import { Lightbulb, Search, BookOpen, PenTool } from 'lucide-react';
+import { Lightbulb, Search, BookOpen, PenTool, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface QuickActionsProps {
-  onAction: (message: string, action: 'chat' | 'research') => void;
+  onAction: (message: string, action: 'chat' | 'research' | 'find-sources') => void;
   hasVerificationResults: boolean;
   disabled?: boolean;
 }
@@ -12,6 +12,16 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
   const { language } = useLanguage();
   
   const actions = [
+    {
+      icon: GraduationCap,
+      label: language === 'fr' ? 'Trouver des articles' : 'Find articles',
+      message: language === 'fr' 
+        ? 'Recherche des articles académiques pertinents pour mon sujet de recherche'
+        : 'Search for relevant academic articles for my research topic',
+      action: 'find-sources' as const,
+      requiresResults: false,
+      primary: true,
+    },
     {
       icon: Lightbulb,
       label: language === 'fr' ? 'Expliquer mes résultats' : 'Explain my results',
@@ -23,11 +33,11 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
     },
     {
       icon: Search,
-      label: language === 'fr' ? 'Trouver plus de preuves' : 'Find more evidence',
+      label: language === 'fr' ? 'Chercher pour affirmations faibles' : 'Search for weak claims',
       message: language === 'fr'
-        ? 'Recherche des sources académiques supplémentaires qui pourraient soutenir les affirmations non soutenues dans mon brouillon.'
-        : 'Search for additional academic sources that could support the unsupported claims in my draft.',
-      action: 'research' as const,
+        ? 'Trouve des sources académiques pour soutenir mes affirmations non soutenues ou partiellement soutenues'
+        : 'Find academic sources to support my unsupported or partially supported claims',
+      action: 'find-sources' as const,
       requiresResults: true,
     },
     {
@@ -61,7 +71,7 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
         {availableActions.map((action, index) => (
           <Button
             key={index}
-            variant="outline"
+            variant={action.primary ? 'default' : 'outline'}
             size="sm"
             className="gap-2 text-xs"
             onClick={() => onAction(action.message, action.action)}

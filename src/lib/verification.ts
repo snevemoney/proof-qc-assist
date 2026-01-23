@@ -8,6 +8,19 @@ export interface Source {
   journal?: string;
   abstract?: string;
   content?: string;
+  studyType?: string;
+  studyTypeFr?: string;
+  verificationStatus?: 'verified' | 'partial';
+  verificationLinks?: {
+    doi?: string;
+    pubmed?: string;
+    publisher?: string;
+    googleScholar?: string;
+  };
+  citationAPA?: string;
+  keyFindings?: string[];
+  url?: string;
+  relevanceExplanation?: string;
 }
 
 export interface Claim {
