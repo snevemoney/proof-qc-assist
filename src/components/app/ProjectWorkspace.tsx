@@ -5,11 +5,13 @@ import { SourcesTab } from './SourcesTab';
 import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
 import { ChatPanel } from './ChatPanel';
+import { HistoryPanel } from './HistoryPanel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { verifyClaims, type Source } from '@/lib/verification';
 import { useToast } from '@/hooks/use-toast';
 import { useProject } from '@/hooks/useProject';
+import { useVerificationHistory, VerificationHistoryEntry } from '@/hooks/useVerificationHistory';
 
 const ProjectWorkspaceContent = () => {
   const { t, language } = useLanguage();
@@ -38,6 +40,7 @@ const ProjectWorkspaceContent = () => {
     updateStateImmediate,
   } = useProject();
 
+  const { saveToHistory } = useVerificationHistory();
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Sync project context with chat
@@ -67,6 +70,24 @@ const ProjectWorkspaceContent = () => {
     setSources(prev => prev.filter(s => s.id !== id));
   };
 
+  const handleRestoreHistory = (entry: VerificationHistoryEntry) => {
+    // Restore the verification state from history
+    setClaims(entry.claims);
+    setSummary(entry.summary);
+    setSources(entry.sourcesSnapshot);
+    setDraftText(entry.draftText);
+    setStrictMode(entry.strictMode);
+    setHasVerified(true);
+    setActiveTab('report');
+    
+    toast({
+      title: language === 'fr' ? 'Historique restauré' : 'History restored',
+      description: language === 'fr' 
+        ? 'Les résultats précédents ont été chargés'
+        : 'Previous results have been loaded',
+    });
+  };
+
   const handleVerify = async () => {
     console.log('handleVerify: Starting verification...');
     setIsVerifying(true);
@@ -89,6 +110,15 @@ const ProjectWorkspaceContent = () => {
       });
       
       console.log('handleVerify: State updated and saved');
+
+      // Save to history for logged-in users
+      await saveToHistory({
+        claims: result.claims,
+        summary: result.summary,
+        draftText,
+        sourcesSnapshot: sources,
+        strictMode,
+      });
       
       toast({
         title: language === 'fr' ? 'Vérification terminée' : 'Verification complete',
@@ -182,6 +212,9 @@ const ProjectWorkspaceContent = () => {
       
       {/* Chat Panel */}
       <ChatPanel />
+      
+      {/* History Panel */}
+      <HistoryPanel onRestoreHistory={handleRestoreHistory} />
     </div>
   );
 };
