@@ -5,7 +5,7 @@ import { SourcesTab } from './SourcesTab';
 import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
 import { ChatPanel } from './ChatPanel';
-import { HistoryPanel } from './HistoryPanel';
+
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { verifyClaims, type Source } from '@/lib/verification';
@@ -40,7 +40,7 @@ const ProjectWorkspaceContent = () => {
     updateStateImmediate,
   } = useProject();
 
-  const { saveToHistory } = useVerificationHistory();
+  const { history, isLoading: historyLoading, saveToHistory, deleteFromHistory } = useVerificationHistory();
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Sync project context with chat
@@ -205,6 +205,10 @@ const ProjectWorkspaceContent = () => {
               summary={summary}
               sourcesCount={sources.length}
               draftLength={draftText.length}
+              history={history}
+              historyLoading={historyLoading}
+              onRestoreHistory={handleRestoreHistory}
+              onDeleteHistory={deleteFromHistory}
             />
           </TabsContent>
         </div>
@@ -212,9 +216,6 @@ const ProjectWorkspaceContent = () => {
       
       {/* Chat Panel */}
       <ChatPanel />
-      
-      {/* History Panel */}
-      <HistoryPanel onRestoreHistory={handleRestoreHistory} />
     </div>
   );
 };
