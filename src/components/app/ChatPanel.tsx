@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, MessageCircle, Sparkles, Trash2 } from 'lucide-react';
+import { Send, MessageCircle, Sparkles, Trash2, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,6 +8,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatMessage } from './ChatMessage';
 import { QuickActions } from './QuickActions';
+import { PICOSearchForm } from './PICOSearchForm';
 import { cn } from '@/lib/utils';
 
 export const ChatPanel = () => {
@@ -26,6 +27,7 @@ export const ChatPanel = () => {
   
   const [inputValue, setInputValue] = useState('');
   const [isResearchMode, setIsResearchMode] = useState(false);
+  const [showPICO, setShowPICO] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -132,7 +134,17 @@ export const ChatPanel = () => {
             )}
           </ScrollArea>
 
-          <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={isLoading} />
+          {showPICO ? (
+            <div className="p-4 border-t border-border">
+              <PICOSearchForm 
+                onSearch={handleQuickAction}
+                onClose={() => setShowPICO(false)}
+                disabled={isLoading}
+              />
+            </div>
+          ) : (
+            <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={isLoading} />
+          )}
 
           <form onSubmit={handleSubmit} className="p-4 border-t border-border flex-shrink-0">
             <div className="flex gap-2 mb-2">
@@ -145,6 +157,16 @@ export const ChatPanel = () => {
               >
                 <Sparkles className="h-3 w-3" />
                 {language === 'fr' ? 'Mode recherche' : 'Research mode'}
+              </Button>
+              <Button
+                type="button"
+                variant={showPICO ? "default" : "outline"}
+                size="sm"
+                className="text-xs gap-1"
+                onClick={() => setShowPICO(!showPICO)}
+              >
+                <Stethoscope className="h-3 w-3" />
+                PICO
               </Button>
             </div>
             

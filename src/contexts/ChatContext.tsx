@@ -99,7 +99,26 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     let displayContent = content;
     let searchQuery = content;
     
-    if (content === '__AUTO_SEARCH_CONTEXT__' || content === '__AUTO_SEARCH_WEAK_CLAIMS__') {
+    // Handle PICO search
+    if (content.startsWith('__PICO_SEARCH__')) {
+      try {
+        const picoData = JSON.parse(content.replace('__PICO_SEARCH__', ''));
+        const parts: string[] = [];
+        
+        if (picoData.population) parts.push(`Population: ${picoData.population}`);
+        if (picoData.intervention) parts.push(`Intervention: ${picoData.intervention}`);
+        if (picoData.comparison) parts.push(`Comparison: ${picoData.comparison}`);
+        if (picoData.outcome) parts.push(`Outcome: ${picoData.outcome}`);
+        
+        searchQuery = parts.join(' | ');
+        displayContent = language === 'fr'
+          ? `🔬 Recherche PICO:\n• P: ${picoData.population || '—'}\n• I: ${picoData.intervention || '—'}\n• C: ${picoData.comparison || '—'}\n• O: ${picoData.outcome || '—'}`
+          : `🔬 PICO Search:\n• P: ${picoData.population || '—'}\n• I: ${picoData.intervention || '—'}\n• C: ${picoData.comparison || '—'}\n• O: ${picoData.outcome || '—'}`;
+      } catch {
+        // Fallback if parsing fails
+        searchQuery = content.replace('__PICO_SEARCH__', '');
+      }
+    } else if (content === '__AUTO_SEARCH_CONTEXT__' || content === '__AUTO_SEARCH_WEAK_CLAIMS__') {
       const isWeakClaimsSearch = content === '__AUTO_SEARCH_WEAK_CLAIMS__';
       
       // Build dynamic query from context
