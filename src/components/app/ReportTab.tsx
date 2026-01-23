@@ -3,34 +3,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
+import type { Claim, VerificationSummary } from '@/lib/verification';
 
 type ClaimStatus = 'supported' | 'partial' | 'unsupported' | 'contradicted';
-
-interface Claim {
-  id: string;
-  text: string;
-  status: ClaimStatus;
-  sourceRef?: string;
-  evidence?: string;
-  suggestion?: string;
-}
 
 interface ReportTabProps {
   hasVerified: boolean;
   claims: Claim[];
+  summary: VerificationSummary | null;
   sourcesCount: number;
   draftLength: number;
 }
 
-const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass: string; label: string }> = {
-  supported: { icon: CheckCircle2, colorClass: 'text-success', label: 'Supported' },
-  partial: { icon: AlertTriangle, colorClass: 'text-warning', label: 'Partial' },
-  unsupported: { icon: HelpCircle, colorClass: 'text-caution', label: 'Not Found' },
-  contradicted: { icon: XCircle, colorClass: 'text-destructive', label: 'Contradicted' },
+const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass: string; labelEn: string; labelFr: string }> = {
+  supported: { icon: CheckCircle2, colorClass: 'text-success', labelEn: 'Supported', labelFr: 'Soutenu' },
+  partial: { icon: AlertTriangle, colorClass: 'text-warning', labelEn: 'Partial', labelFr: 'Partiel' },
+  unsupported: { icon: HelpCircle, colorClass: 'text-caution', labelEn: 'Not Found', labelFr: 'Non trouvé' },
+  contradicted: { icon: XCircle, colorClass: 'text-destructive', labelEn: 'Contradicted', labelFr: 'Contredit' },
 };
 
-export const ReportTab = ({ hasVerified, claims, sourcesCount, draftLength }: ReportTabProps) => {
-  const { t } = useLanguage();
+export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLength }: ReportTabProps) => {
+  const { t, language } = useLanguage();
 
   if (!hasVerified) {
     return (
@@ -71,13 +64,22 @@ export const ReportTab = ({ hasVerified, claims, sourcesCount, draftLength }: Re
     );
   }
 
-  const supported = claims.filter(c => c.status === 'supported').length;
-  const partial = claims.filter(c => c.status === 'partial').length;
-  const unsupported = claims.filter(c => c.status === 'unsupported').length;
-  const contradicted = claims.filter(c => c.status === 'contradicted').length;
+  const supported = summary?.supported ?? claims.filter(c => c.status === 'supported').length;
+  const partial = summary?.partial ?? claims.filter(c => c.status === 'partial').length;
+  const unsupported = summary?.unsupported ?? claims.filter(c => c.status === 'unsupported').length;
+  const contradicted = summary?.contradicted ?? claims.filter(c => c.status === 'contradicted').length;
 
   return (
     <div className="space-y-6">
+      {/* Overall Feedback */}
+      {summary?.overallFeedback && (
+        <Card className="bg-muted/50">
+          <CardContent className="pt-4">
+            <p className="text-sm text-foreground">{summary.overallFeedback}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-4">
         <Card>
@@ -144,41 +146,48 @@ export const ReportTab = ({ hasVerified, claims, sourcesCount, draftLength }: Re
           <CardTitle className="text-base">{t('report.claimAnalysis')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {claims.map((claim) => {
-            const config = statusConfig[claim.status];
-            const Icon = config.icon;
-            
-            return (
-              <div key={claim.id} className="border-b pb-4 last:border-0 last:pb-0">
-                <div className="flex items-start gap-3">
-                  <Icon className={`h-5 w-5 mt-0.5 ${config.colorClass}`} />
-                  <div className="flex-1 space-y-2">
-                    <p className="text-sm text-foreground">{claim.text}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {config.label}
-                      </Badge>
-                      {claim.sourceRef && (
-                        <Badge variant="secondary" className="text-xs">
-                          {claim.sourceRef}
+          {claims.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {language === 'fr' ? 'Aucune affirmation identifiée.' : 'No claims identified.'}
+            </p>
+          ) : (
+            claims.map((claim) => {
+              const config = statusConfig[claim.status];
+              const Icon = config.icon;
+              const label = language === 'fr' ? config.labelFr : config.labelEn;
+              
+              return (
+                <div key={claim.id} className="border-b pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-start gap-3">
+                    <Icon className={`h-5 w-5 mt-0.5 ${config.colorClass}`} />
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm text-foreground">{claim.text}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {label}
                         </Badge>
+                        {claim.sourceRef && (
+                          <Badge variant="secondary" className="text-xs">
+                            {claim.sourceRef}
+                          </Badge>
+                        )}
+                      </div>
+                      {claim.evidence && (
+                        <p className="text-xs text-muted-foreground bg-muted p-2 rounded italic">
+                          "{claim.evidence}"
+                        </p>
+                      )}
+                      {claim.suggestion && (
+                        <p className="text-xs text-primary">
+                          💡 {claim.suggestion}
+                        </p>
                       )}
                     </div>
-                    {claim.evidence && (
-                      <p className="text-xs text-muted-foreground bg-muted p-2 rounded italic">
-                        "{claim.evidence}"
-                      </p>
-                    )}
-                    {claim.suggestion && (
-                      <p className="text-xs text-primary">
-                        💡 {claim.suggestion}
-                      </p>
-                    )}
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </CardContent>
       </Card>
     </div>
