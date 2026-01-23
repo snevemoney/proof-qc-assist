@@ -283,7 +283,7 @@ export const DraftTab = ({
           <Button 
             onClick={onVerify} 
             disabled={!canVerify || isVerifying}
-            className="gap-2"
+            className="gap-2 whitespace-nowrap min-w-fit"
           >
             {isVerifying ? (
               <>

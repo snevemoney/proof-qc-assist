@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -48,11 +48,11 @@ const getStatusConfig = (status: string) => {
   return statusConfig[status as ClaimStatus] || statusConfig['unsupported'];
 };
 
-export const ReportTab = ({ 
-  hasVerified, 
-  claims, 
-  summary, 
-  sourcesCount, 
+export const ReportTab = ({
+  hasVerified,
+  claims,
+  summary,
+  sourcesCount,
   draftLength,
   history,
   historyLoading,
@@ -61,6 +61,21 @@ export const ReportTab = ({
 }: ReportTabProps) => {
   const { t, language } = useLanguage();
   const { askAboutClaim } = useChat();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+
+  const handleDeleteClick = (id: string) => {
+    setEntryToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (entryToDelete) {
+      onDeleteHistory(entryToDelete);
+      setEntryToDelete(null);
+      setDeleteConfirmOpen(false);
+    }
+  };
   const locale = language === 'fr' ? fr : enUS;
 
   const getStatusSummary = (entry: VerificationHistoryEntry) => {
@@ -141,36 +156,14 @@ export const ReportTab = ({
                           <RotateCcw className="h-4 w-4 mr-1" />
                           {language === 'fr' ? 'Restaurer' : 'Restore'}
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                {language === 'fr' ? 'Supprimer cette entrée?' : 'Delete this entry?'}
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {language === 'fr'
-                                  ? 'Cette action est irréversible.'
-                                  : 'This action cannot be undone.'}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>
-                                {language === 'fr' ? 'Annuler' : 'Cancel'}
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => onDeleteHistory(entry.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                {language === 'fr' ? 'Supprimer' : 'Delete'}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteClick(entry.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -365,6 +358,35 @@ export const ReportTab = ({
 
       {/* History Section */}
       {renderHistorySection()}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmOpen && (
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {language === 'fr' ? 'Supprimer cette entrée?' : 'Delete this entry?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {language === 'fr'
+                  ? 'Cette action est irréversible.'
+                  : 'This action cannot be undone.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {language === 'fr' ? 'Annuler' : 'Cancel'}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {language === 'fr' ? 'Supprimer' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

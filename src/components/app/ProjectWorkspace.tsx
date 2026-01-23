@@ -103,13 +103,17 @@ const ProjectWorkspaceContent = () => {
         throw new Error('Invalid verification response structure');
       }
       
-      // Update all state at once and save immediately
+      // Update state except activeTab, then switch tab after a brief delay
       await updateStateImmediate({
         claims: result.claims,
         summary: result.summary,
         hasVerified: true,
-        activeTab: 'report',
       });
+      
+      // Small delay before tab switch to let dialogs properly unmount
+      setTimeout(() => {
+        setActiveTab('report');
+      }, 50);
       
       console.log('handleVerify: State updated and saved');
 
