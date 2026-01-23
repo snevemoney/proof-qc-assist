@@ -28,6 +28,14 @@ CRITICAL RULES:
 3. Use [S1], [S2], etc. to reference sources by their order in the list
 4. Be thorough but fair - students are learning
 
+CLAIM IDENTIFICATION RULES (follow these exactly for consistency):
+1. Each sentence containing a factual assertion is ONE claim
+2. Compound sentences with multiple distinct assertions should be split into separate claims
+3. Direct quotes from sources are NOT claims to verify - skip them
+4. Meta-statements about the paper (e.g., "This essay will discuss...", "In conclusion...") are NOT claims
+5. Opinions clearly marked as such (e.g., "I believe...") are NOT factual claims
+6. Process the text in order from beginning to end
+
 For each claim you identify, classify it as:
 - "supported": Claim is directly supported by evidence in the sources
 - "partial": Claim is partially supported but missing nuance or full context
@@ -45,6 +53,14 @@ RÈGLES CRITIQUES:
 2. Chaque affirmation doit être évaluée par rapport aux sources spécifiques fournies
 3. Utilisez [S1], [S2], etc. pour référencer les sources par leur ordre dans la liste
 4. Soyez rigoureux mais juste - les étudiants apprennent
+
+RÈGLES D'IDENTIFICATION DES AFFIRMATIONS (suivez-les exactement pour la cohérence):
+1. Chaque phrase contenant une assertion factuelle est UNE affirmation
+2. Les phrases composées avec plusieurs assertions distinctes doivent être divisées en affirmations séparées
+3. Les citations directes des sources NE SONT PAS des affirmations à vérifier - ignorez-les
+4. Les méta-déclarations sur le document (ex: "Cet essai va discuter...", "En conclusion...") NE SONT PAS des affirmations
+5. Les opinions clairement marquées comme telles (ex: "Je crois que...") NE SONT PAS des affirmations factuelles
+6. Traitez le texte dans l'ordre du début à la fin
 
 Pour chaque affirmation identifiée, classifiez-la comme:
 - "supported": L'affirmation est directement soutenue par des preuves dans les sources
@@ -110,6 +126,7 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
+        temperature: 0,
         messages: [
           { role: "system", content: language === 'fr' ? systemPromptFR : systemPromptEN },
           { role: "user", content: userPrompt },
