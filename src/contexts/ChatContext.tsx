@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
 import type { Source, Claim, VerificationSummary } from '@/lib/verification';
 import type { ArticleResult } from '@/components/app/ArticleSuggestionCard';
@@ -35,6 +35,11 @@ interface ChatContextType {
   }) => void;
   onAddSources?: (sources: Source[]) => void;
   setOnAddSources: (callback: ((sources: Source[]) => void) | undefined) => void;
+  // New: external message sync
+  externalMessages: ChatMessage[];
+  setExternalMessages: (messages: ChatMessage[]) => void;
+  onMessagesChange?: (messages: ChatMessage[]) => void;
+  setOnMessagesChange: (callback: ((messages: ChatMessage[]) => void) | undefined) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -43,12 +48,14 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/research-cha
 const SEARCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-articles`;
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [addedArticleIds, setAddedArticleIds] = useState<Set<string>>(new Set());
   const [onAddSourcesCallback, setOnAddSourcesCallback] = useState<((sources: Source[]) => void) | undefined>();
+  const [onMessagesChangeCallback, setOnMessagesChangeCallback] = useState<((messages: ChatMessage[]) => void) | undefined>();
+  const [externalMessages, setExternalMessages] = useState<ChatMessage[]>([]);
   const [projectContext, setProjectContext] = useState<{
     sources: Source[];
     draftText: string;
@@ -60,6 +67,20 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     claims: [],
     summary: null,
   });
+
+  // Sync external messages on mount
+  useEffect(() => {
+    if (externalMessages.length > 0 && messages.length === 0) {
+      setMessages(externalMessages);
+    }
+  }, [externalMessages]);
+
+  // Notify parent when messages change
+  useEffect(() => {
+    if (onMessagesChangeCallback && messages.length > 0) {
+      onMessagesChangeCallback(messages);
+    }
+  }, [messages, onMessagesChangeCallback]);
 
   // Convert ArticleResult to Source
   const articleToSource = useCallback((article: ArticleResult): Source => {
@@ -92,6 +113,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const setOnAddSources = useCallback((callback: ((sources: Source[]) => void) | undefined) => {
     setOnAddSourcesCallback(() => callback);
+  }, []);
+
+  const setOnMessagesChange = useCallback((callback: ((messages: ChatMessage[]) => void) | undefined) => {
+    setOnMessagesChangeCallback(() => callback);
   }, []);
 
   const sendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
@@ -399,6 +424,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       setProjectContext,
       onAddSources: onAddSourcesCallback,
       setOnAddSources,
+      externalMessages,
+      setExternalMessages,
+      onMessagesChange: onMessagesChangeCallback,
+      setOnMessagesChange,
     }}>
       {children}
     </ChatContext.Provider>

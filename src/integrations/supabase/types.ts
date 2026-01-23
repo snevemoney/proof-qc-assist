@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          active_tab: string | null
+          chat_messages: Json | null
+          claims: Json | null
+          created_at: string | null
+          draft_text: string | null
+          has_verified: boolean | null
+          id: string
+          name: string | null
+          sources: Json | null
+          strict_mode: boolean | null
+          summary: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active_tab?: string | null
+          chat_messages?: Json | null
+          claims?: Json | null
+          created_at?: string | null
+          draft_text?: string | null
+          has_verified?: boolean | null
+          id?: string
+          name?: string | null
+          sources?: Json | null
+          strict_mode?: boolean | null
+          summary?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active_tab?: string | null
+          chat_messages?: Json | null
+          claims?: Json | null
+          created_at?: string | null
+          draft_text?: string | null
+          has_verified?: boolean | null
+          id?: string
+          name?: string | null
+          sources?: Json | null
+          strict_mode?: boolean | null
+          summary?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
