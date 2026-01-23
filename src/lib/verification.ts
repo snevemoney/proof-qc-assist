@@ -52,20 +52,28 @@ export async function verifyClaims(
   strictMode: boolean,
   language: 'fr' | 'en'
 ): Promise<VerificationResult> {
+  console.log('verifyClaims: Starting with', sources.length, 'sources, draftText length:', draftText.length);
+  
+  const requestBody = {
+    sources: sources.map(s => ({
+      id: s.id,
+      title: s.title,
+      authors: s.authors,
+      year: s.year,
+      content: s.content || s.abstract || '',
+    })),
+    draftText,
+    strictMode,
+    language,
+  };
+  
+  console.log('verifyClaims: Request body:', JSON.stringify(requestBody, null, 2).substring(0, 500));
+  
   const { data, error } = await supabase.functions.invoke('verify-claims', {
-    body: {
-      sources: sources.map(s => ({
-        id: s.id,
-        title: s.title,
-        authors: s.authors,
-        year: s.year,
-        content: s.content || s.abstract || '',
-      })),
-      draftText,
-      strictMode,
-      language,
-    },
+    body: requestBody,
   });
+  
+  console.log('verifyClaims: Response - data:', data, 'error:', error);
 
   if (error) {
     // Try to extract a more specific error message from FunctionsHttpError.context

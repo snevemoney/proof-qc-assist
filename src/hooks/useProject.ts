@@ -136,18 +136,12 @@ export const useProject = () => {
     loadProject();
   }, [user, authLoading]);
 
-  // Debounced save
-  const saveProject = useCallback(
+  // Core save logic (extracted for reuse)
+  const performSave = useCallback(
     async (newState: ProjectState) => {
-      if (isInitialLoadRef.current) return;
+      setIsSaving(true);
 
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-
-      saveTimeoutRef.current = setTimeout(async () => {
-        setIsSaving(true);
-
+      try {
         if (user) {
           // Save to database - check if project exists first
           const { data: existing } = await supabase
@@ -191,6 +185,8 @@ export const useProject = () => {
 
           if (error) {
             console.error('Error saving project:', error);
+          } else {
+            console.log('Project saved successfully');
           }
         } else {
           // Save to localStorage for anonymous users
@@ -201,12 +197,47 @@ export const useProject = () => {
               timestamp: msg.timestamp.toISOString(),
             })),
           }));
+          console.log('Project saved to localStorage');
         }
-
+      } catch (err) {
+        console.error('Error in performSave:', err);
+      } finally {
         setIsSaving(false);
-      }, SAVE_DEBOUNCE_MS);
+      }
     },
     [user]
+  );
+
+  // Debounced save
+  const saveProject = useCallback(
+    async (newState: ProjectState) => {
+      if (isInitialLoadRef.current) return;
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = setTimeout(() => {
+        performSave(newState);
+      }, SAVE_DEBOUNCE_MS);
+    },
+    [performSave]
+  );
+
+  // Immediate save (bypasses debounce) - for critical operations like verification
+  const saveNow = useCallback(
+    async (newState: ProjectState) => {
+      if (isInitialLoadRef.current) return;
+
+      // Cancel any pending debounced save
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      await performSave(newState);
+    },
+    [performSave]
   );
 
   // Update state and trigger save
@@ -312,6 +343,20 @@ export const useProject = () => {
     [saveProject]
   );
 
+  // Batch update with immediate save (for verification results)
+  const updateStateImmediate = useCallback(
+    async (updates: Partial<ProjectState>) => {
+      let newState: ProjectState;
+      setState((prev) => {
+        newState = { ...prev, ...updates };
+        return newState;
+      });
+      // Wait for state to be set, then save immediately
+      await saveNow({ ...state, ...updates });
+    },
+    [saveNow, state]
+  );
+
   return {
     ...state,
     isLoading: isLoading || authLoading,
@@ -325,5 +370,6 @@ export const useProject = () => {
     setStrictMode,
     setHasVerified,
     updateState,
+    updateStateImmediate,
   };
 };
