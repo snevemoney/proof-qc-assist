@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -60,7 +60,7 @@ export const ReportTab = ({
   onDeleteHistory,
 }: ReportTabProps) => {
   const { t, language } = useLanguage();
-  const { askAboutClaim } = useChat();
+  const { askAboutClaim, findArticlesForClaim } = useChat();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
 
@@ -335,6 +335,15 @@ export const ReportTab = ({
                         >
                           <MessageCircle className="h-3 w-3" />
                           {t('report.askAboutClaim')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                          onClick={() => findArticlesForClaim(claim)}
+                        >
+                          <Search className="h-3 w-3" />
+                          {t('report.findArticles')}
                         </Button>
                       </div>
                       {claim.evidence && (

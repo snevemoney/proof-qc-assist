@@ -18,6 +18,7 @@ interface ChatContextType {
   setIsPanelOpen: (open: boolean) => void;
   sendMessage: (content: string, action?: 'chat' | 'research' | 'find-sources') => Promise<void>;
   askAboutClaim: (claim: Claim) => void;
+  findArticlesForClaim: (claim: Claim) => void;
   clearMessages: () => void;
   addedArticleIds: Set<string>;
   addSourceFromSearch: (article: ArticleResult) => void;
@@ -404,6 +405,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     sendMessage(question);
   }, [language, sendMessage]);
 
+  const findArticlesForClaim = useCallback((claim: Claim) => {
+    setIsPanelOpen(true);
+    
+    const searchQuery = language === 'fr'
+      ? `Trouve des articles académiques pour soutenir cette affirmation: "${claim.text}"`
+      : `Find academic articles to support this claim: "${claim.text}"`;
+    
+    sendMessage(searchQuery, 'find-sources');
+  }, [language, sendMessage]);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setAddedArticleIds(new Set());
@@ -417,6 +428,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       setIsPanelOpen,
       sendMessage,
       askAboutClaim,
+      findArticlesForClaim,
       clearMessages,
       addedArticleIds,
       addSourceFromSearch,
