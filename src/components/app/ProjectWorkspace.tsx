@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Edit3, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SourcesTab } from './SourcesTab';
 import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
+import { ChatPanel } from './ChatPanel';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { verifyClaims, type Source, type Claim, type VerificationSummary } from '@/lib/verification';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,9 +32,10 @@ const demoSources: Source[] = [
   },
 ];
 
-export const ProjectWorkspace = () => {
+const ProjectWorkspaceContent = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
+  const { setProjectContext } = useChat();
   const [sources, setSources] = useState<Source[]>(demoSources);
   const [draftText, setDraftText] = useState('');
   const [hasVerified, setHasVerified] = useState(false);
@@ -41,6 +44,11 @@ export const ProjectWorkspace = () => {
   const [summary, setSummary] = useState<VerificationSummary | null>(null);
   const [activeTab, setActiveTab] = useState('sources');
   const [strictMode, setStrictMode] = useState(false);
+
+  // Sync project context with chat
+  useEffect(() => {
+    setProjectContext({ sources, draftText, claims, summary });
+  }, [sources, draftText, claims, summary, setProjectContext]);
 
   const handleAddSources = (newSources: Source[]) => {
     setSources(prev => [...prev, ...newSources]);
@@ -128,6 +136,17 @@ export const ProjectWorkspace = () => {
           </TabsContent>
         </div>
       </Tabs>
+      
+      {/* Chat Panel */}
+      <ChatPanel />
     </div>
+  );
+};
+
+export const ProjectWorkspace = () => {
+  return (
+    <ChatProvider>
+      <ProjectWorkspaceContent />
+    </ChatProvider>
   );
 };

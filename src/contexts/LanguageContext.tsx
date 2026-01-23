@@ -49,6 +49,21 @@ const translations = {
     'report.exportPdf': 'Export PDF',
     'report.copyMarkdown': 'Copy Markdown',
     'report.claimAnalysis': 'Claim-by-Claim Analysis',
+    'report.askAboutClaim': 'Ask AI about this claim',
+    
+    // Chat
+    'chat.title': 'ProofCheck Assistant',
+    'chat.placeholder': 'Ask a question...',
+    'chat.clear': 'Clear conversation',
+    'chat.researchMode': 'Research mode',
+    'chat.webSearchEnabled': 'Web search enabled',
+    'chat.howCanIHelp': 'How can I help you?',
+    'chat.contextInfo': 'I know your sources, draft, and verification results. Ask me anything!',
+    'chat.quickActions': 'Quick actions',
+    'chat.explainResults': 'Explain my results',
+    'chat.findEvidence': 'Find more evidence',
+    'chat.citationHelp': 'Citation help',
+    'chat.improveWriting': 'Improve my writing',
   },
   fr: {
     // Tabs
@@ -90,6 +105,21 @@ const translations = {
     'report.exportPdf': 'Exporter PDF',
     'report.copyMarkdown': 'Copier Markdown',
     'report.claimAnalysis': 'Analyse affirmation par affirmation',
+    'report.askAboutClaim': 'Demander à l\'IA',
+    
+    // Chat
+    'chat.title': 'Assistant ProofCheck',
+    'chat.placeholder': 'Posez une question...',
+    'chat.clear': 'Effacer la conversation',
+    'chat.researchMode': 'Mode recherche',
+    'chat.webSearchEnabled': 'Recherche web activée',
+    'chat.howCanIHelp': 'Comment puis-je vous aider?',
+    'chat.contextInfo': 'Je connais vos sources, votre brouillon et vos résultats de vérification. Posez-moi des questions!',
+    'chat.quickActions': 'Actions rapides',
+    'chat.explainResults': 'Expliquer mes résultats',
+    'chat.findEvidence': 'Trouver plus de preuves',
+    'chat.citationHelp': 'Aide aux citations',
+    'chat.improveWriting': 'Améliorer mon écriture',
   },
 };
 

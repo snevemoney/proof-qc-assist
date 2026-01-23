@@ -1,8 +1,9 @@
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useChat } from '@/contexts/ChatContext';
 import type { Claim, VerificationSummary } from '@/lib/verification';
 
 type ClaimStatus = 'supported' | 'partial' | 'unsupported' | 'contradicted';
@@ -24,6 +25,7 @@ const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass:
 
 export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLength }: ReportTabProps) => {
   const { t, language } = useLanguage();
+  const { askAboutClaim } = useChat();
 
   if (!hasVerified) {
     return (
@@ -162,7 +164,7 @@ export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLen
                     <Icon className={`h-5 w-5 mt-0.5 ${config.colorClass}`} />
                     <div className="flex-1 space-y-2">
                       <p className="text-sm text-foreground">{claim.text}</p>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="text-xs">
                           {label}
                         </Badge>
@@ -171,6 +173,15 @@ export const ReportTab = ({ hasVerified, claims, summary, sourcesCount, draftLen
                             {claim.sourceRef}
                           </Badge>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                          onClick={() => askAboutClaim(claim)}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          {t('report.askAboutClaim')}
+                        </Button>
                       </div>
                       {claim.evidence && (
                         <p className="text-xs text-muted-foreground bg-muted p-2 rounded italic">
