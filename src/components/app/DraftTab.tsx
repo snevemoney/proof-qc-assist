@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Play, Upload, Settings2, AlertCircle } from 'lucide-react';
+import { Play, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -17,6 +16,8 @@ interface DraftTabProps {
   onVerify: () => void;
   sourcesCount: number;
   isVerifying: boolean;
+  strictMode: boolean;
+  onStrictModeChange: (value: boolean) => void;
 }
 
 export const DraftTab = ({ 
@@ -24,10 +25,11 @@ export const DraftTab = ({
   onDraftChange, 
   onVerify, 
   sourcesCount,
-  isVerifying 
+  isVerifying,
+  strictMode,
+  onStrictModeChange,
 }: DraftTabProps) => {
   const { t } = useLanguage();
-  const [strictMode, setStrictMode] = useState(false);
 
   const wordCount = draftText.trim() ? draftText.trim().split(/\s+/).length : 0;
   const charCount = draftText.length;
@@ -73,6 +75,7 @@ export const DraftTab = ({
         value={draftText}
         onChange={(e) => onDraftChange(e.target.value)}
         className="min-h-[400px] resize-none font-mono text-sm"
+        disabled={isVerifying}
       />
 
       <div className="flex items-center justify-between border-t pt-4">
@@ -80,7 +83,8 @@ export const DraftTab = ({
           <Switch
             id="strict-mode"
             checked={strictMode}
-            onCheckedChange={setStrictMode}
+            onCheckedChange={onStrictModeChange}
+            disabled={isVerifying}
           />
           <Label htmlFor="strict-mode" className="text-sm font-normal cursor-pointer">
             {t('draft.strictMode')}
@@ -109,8 +113,17 @@ export const DraftTab = ({
             disabled={!canVerify || isVerifying}
             className="gap-2"
           >
-            <Play className="h-4 w-4" />
-            {isVerifying ? t('draft.verifying') : t('draft.verifyNow')}
+            {isVerifying ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('draft.verifying')}
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                {t('draft.verifyNow')}
+              </>
+            )}
           </Button>
         </div>
       </div>

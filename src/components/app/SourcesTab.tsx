@@ -1,18 +1,8 @@
-import { useState } from 'react';
 import { Plus, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { FileUpload } from './FileUpload';
 import { SourceCard } from './SourceCard';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-interface Source {
-  id: string;
-  title: string;
-  authors: string;
-  year: string;
-  journal?: string;
-  abstract?: string;
-}
+import type { Source } from '@/lib/verification';
 
 interface SourcesTabProps {
   sources: Source[];
@@ -31,6 +21,7 @@ export const SourcesTab = ({ sources, onAddSources, onDeleteSource }: SourcesTab
       authors: t('source.extracting'),
       year: new Date().getFullYear().toString(),
       abstract: t('source.processingText'),
+      content: '', // Would be extracted from PDF in production
     }));
     onAddSources(newSources);
   };
