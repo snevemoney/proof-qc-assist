@@ -25,29 +25,31 @@ export const AppHeader = () => {
   return (
     <>
       <header className="border-b bg-card">
-        <div className="flex h-14 items-center justify-between px-4">
+        <div className="flex h-14 items-center justify-between px-3 sm:px-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary flex-shrink-0">
               <FileCheck className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold text-foreground">ProofCheck QC</span>
+            <span className="text-base sm:text-lg font-semibold text-foreground whitespace-nowrap">
+              ProofCheck QC
+            </span>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <LanguageToggle />
             
             {!isLoading && (
               user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2 px-2 sm:px-3">
                       <User className="h-4 w-4" />
-                      <span className="max-w-[120px] truncate text-xs">
+                      <span className="hidden sm:inline max-w-[120px] truncate text-xs">
                         {user.email}
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="bg-popover z-50">
                     <DropdownMenuItem onClick={() => signOut()} className="gap-2">
                       <LogOut className="h-4 w-4" />
                       {t.signOut}
@@ -59,6 +61,7 @@ export const AppHeader = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setAuthModalOpen(true)}
+                  className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3"
                 >
                   {t.signIn}
                 </Button>

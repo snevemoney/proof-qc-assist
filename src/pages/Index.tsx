@@ -12,7 +12,10 @@ const Index = () => {
         <div className="min-h-screen flex flex-col bg-background">
           <AppHeader />
           <div className="flex flex-1 overflow-hidden">
-            <ProjectSidebar />
+            {/* Hide sidebar on mobile */}
+            <div className="hidden md:block">
+              <ProjectSidebar />
+            </div>
             <ProjectWorkspace />
           </div>
         </div>

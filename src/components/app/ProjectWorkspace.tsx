@@ -273,7 +273,7 @@ const ProjectWorkspaceContent = () => {
   }
 
   return (
-    <main className="flex-1 p-6 relative overflow-auto">
+    <main className="flex-1 p-3 sm:p-6 relative overflow-auto">
       {isSaving && (
         <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" />
@@ -291,22 +291,23 @@ const ProjectWorkspaceContent = () => {
       />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="sources" className="gap-2">
-            <FileText className="h-4 w-4" />
-            {t('tabs.sources')} ({sources.length})
+        <TabsList className="grid w-full max-w-md grid-cols-3 h-auto">
+          <TabsTrigger value="sources" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
+            <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">{t('tabs.sources')}</span>
+            <span className="hidden xs:inline">({sources.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="draft" className="gap-2">
-            <Edit3 className="h-4 w-4" />
-            {t('tabs.draft')}
+          <TabsTrigger value="draft" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
+            <Edit3 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">{t('tabs.draft')}</span>
           </TabsTrigger>
-          <TabsTrigger value="report" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            {t('tabs.report')}
+          <TabsTrigger value="report" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
+            <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">{t('tabs.report')}</span>
           </TabsTrigger>
         </TabsList>
 
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <TabsContent value="sources" className="mt-0">
             <SourcesTab
               sources={sources}

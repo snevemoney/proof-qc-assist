@@ -98,16 +98,16 @@ export const ReadinessIndicator = ({
   const OverallIcon = overallConfig.icon;
 
   return (
-    <div className="mb-4 p-4 rounded-lg border bg-card space-y-4">
+    <div className="mb-4 p-3 sm:p-4 rounded-lg border bg-card space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <OverallIcon className={cn("h-5 w-5", overallConfig.textColorClass)} />
-          <span className="font-medium text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <OverallIcon className={cn("h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0", overallConfig.textColorClass)} />
+          <span className="font-medium text-xs sm:text-sm truncate">
             {t('readiness.title')}
           </span>
         </div>
-        <span className={cn("font-bold text-lg", overallConfig.textColorClass)}>
+        <span className={cn("font-bold text-base sm:text-lg whitespace-nowrap", overallConfig.textColorClass)}>
           {overallScore}% {language === 'fr' ? 'Prêt' : 'Ready'}
         </span>
       </div>
@@ -179,8 +179,8 @@ export const ReadinessIndicator = ({
       )}
 
       {/* Status Message & CTA */}
-      <div className="flex items-center justify-between pt-1 border-t">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 sm:pt-1 border-t">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           {t(overallConfig.messageKey)}
         </p>
         
@@ -188,7 +188,7 @@ export const ReadinessIndicator = ({
           <button
             onClick={onNavigateToReport}
             className={cn(
-              "text-sm font-medium hover:underline",
+              "text-xs sm:text-sm font-medium hover:underline whitespace-nowrap",
               overallConfig.textColorClass
             )}
           >

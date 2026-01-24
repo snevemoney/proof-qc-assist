@@ -262,35 +262,36 @@ export const ReportTab = ({
       {/* Auth Prompt for Anonymous Users */}
       {showAuthPrompt && (
         <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="pt-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+              <div className="flex items-start gap-3 min-w-0">
                 <History className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">
                     {language === 'fr' 
                       ? 'Enregistrez vos résultats' 
                       : 'Save your results'}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                     {language === 'fr'
-                      ? 'Connectez-vous pour sauvegarder votre historique de vérification et y accéder depuis n\'importe quel appareil.'
-                      : 'Sign in to save your verification history and access it from any device.'}
+                      ? 'Connectez-vous pour sauvegarder votre historique.'
+                      : 'Sign in to save your verification history.'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-start">
                 <Button 
                   variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 px-2 text-muted-foreground"
                   onClick={onDismissAuthPrompt}
                 >
-                  <X className="h-4 w-4" />
+                  {language === 'fr' ? 'Plus tard' : 'Later'}
                 </Button>
                 <Button 
                   size="sm"
                   onClick={onOpenAuthModal}
+                  className="whitespace-nowrap"
                 >
                   {language === 'fr' ? 'Se connecter' : 'Sign in'}
                 </Button>
