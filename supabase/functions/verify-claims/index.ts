@@ -1,4 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  buildKnowledgePromptSection, 
+  detectTopicFromText,
+  type SystemKnowledge,
+  type SourceQuality 
+} from "../_shared/knowledge.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -183,6 +190,49 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Fetch system knowledge for enhanced prompts (flywheel learning)
+    let knowledgeSection = '';
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
+      
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Detect topics from draft
+        const detectedTopics = detectTopicFromText(draftText);
+        
+        // Fetch relevant knowledge
+        const { data: knowledge } = await supabase
+          .from('system_knowledge')
+          .select('*')
+          .in('topic', [...detectedTopics, 'general'])
+          .order('confidence_score', { ascending: false })
+          .limit(5);
+        
+        // Fetch high-quality sources for these topics
+        const { data: topSources } = await supabase
+          .from('source_quality_ratings')
+          .select('*')
+          .overlaps('topic_areas', detectedTopics)
+          .gte('support_rate', 0.6)
+          .gte('times_used', 3)
+          .order('support_rate', { ascending: false })
+          .limit(5);
+        
+        if ((knowledge && knowledge.length > 0) || (topSources && topSources.length > 0)) {
+          knowledgeSection = buildKnowledgePromptSection(
+            knowledge as SystemKnowledge[] || [],
+            topSources as SourceQuality[] || [],
+            language
+          );
+        }
+      }
+    } catch (e) {
+      // Non-critical: continue without knowledge enhancement
+      console.log('Could not fetch system knowledge:', e);
+    }
+
     // Format sources for the prompt
     const sourcesContext = sources.map((source, index) => {
       return `[S${index + 1}] ${source.title}
@@ -220,11 +270,14 @@ ${criteriaList}
 
 ${language === 'fr' ? 'SOURCES DISPONIBLES' : 'AVAILABLE SOURCES'}:
 ${sourcesContext}
-${instructionsSection}${evaluationGridSection}
+${instructionsSection}${evaluationGridSection}${knowledgeSection ? `
+${language === 'fr' ? 'INTELLIGENCE COLLECTIVE (apprentissage du système)' : 'COLLECTIVE INTELLIGENCE (system learning)'}:
+${knowledgeSection}
+` : ''}
 ${language === 'fr' ? 'BROUILLON DE L\'ÉTUDIANT À VÉRIFIER' : 'STUDENT DRAFT TO VERIFY'}:
 ${draftText}
 
-${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}${instructions ? (language === 'fr' ? ' Aussi, vérifiez chaque exigence du travail.' : ' Also, verify each assignment requirement.') : ''}${evaluationGrid && evaluationGrid.length > 0 ? (language === 'fr' ? ' Enfin, estimez le score pour chaque critère de la grille d\'évaluation.' : ' Finally, estimate the score for each evaluation criterion.') : ''}`;
+${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}${instructions ? (language === 'fr' ? ' Aussi, vérifiez chaque exigence du travail.' : ' Also, verify each assignment requirement.') : ''}${evaluationGrid && evaluationGrid.length > 0 ? (language === 'fr' ? ' Enfin, estimez le score pour chaque critère de la grille d\'évaluation.' : ' Finally, estimate the score for each evaluation criterion.') : ''}${knowledgeSection ? (language === 'fr' ? ' Portez une attention particulière aux erreurs courantes identifiées par l\'intelligence collective.' : ' Pay special attention to common errors identified by collective intelligence.') : ''}`;
 
     // Create AbortController for timeout (90 seconds for complex drafts)
     const controller = new AbortController();

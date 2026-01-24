@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.search-articles]
 verify_jwt = false
+
+[functions.extract-knowledge]
+verify_jwt = false
