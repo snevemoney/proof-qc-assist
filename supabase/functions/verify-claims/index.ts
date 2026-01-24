@@ -202,28 +202,32 @@ serve(async (req) => {
         // Detect topics from draft
         const detectedTopics = detectTopicFromText(draftText);
         
-        // Fetch relevant knowledge
+        // Fetch relevant knowledge (always include 'general' topic)
         const { data: knowledge } = await supabase
           .from('system_knowledge')
           .select('*')
-          .in('topic', [...detectedTopics, 'general'])
+          .in('topic', detectedTopics.length > 0 ? [...detectedTopics, 'general'] : ['general'])
           .order('confidence_score', { ascending: false })
           .limit(5);
         
-        // Fetch high-quality sources for these topics
-        const { data: topSources } = await supabase
-          .from('source_quality_ratings')
-          .select('*')
-          .overlaps('topic_areas', detectedTopics)
-          .gte('support_rate', 0.6)
-          .gte('times_used', 3)
-          .order('support_rate', { ascending: false })
-          .limit(5);
+        // Only fetch source quality ratings if we have detected topics
+        let topSources: SourceQuality[] = [];
+        if (detectedTopics.length > 0) {
+          const { data: sourcesData } = await supabase
+            .from('source_quality_ratings')
+            .select('*')
+            .overlaps('topic_areas', detectedTopics)
+            .gte('support_rate', 0.6)
+            .gte('times_used', 3)
+            .order('support_rate', { ascending: false })
+            .limit(5);
+          topSources = (sourcesData as SourceQuality[]) || [];
+        }
         
-        if ((knowledge && knowledge.length > 0) || (topSources && topSources.length > 0)) {
+        if ((knowledge && knowledge.length > 0) || topSources.length > 0) {
           knowledgeSection = buildKnowledgePromptSection(
-            knowledge as SystemKnowledge[] || [],
-            topSources as SourceQuality[] || [],
+            (knowledge as SystemKnowledge[]) || [],
+            topSources,
             language
           );
         }
