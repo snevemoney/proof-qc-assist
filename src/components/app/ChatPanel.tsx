@@ -263,7 +263,7 @@ export const ChatPanel = () => {
 
       {/* Always mounted to avoid Radix portal race conditions */}
       <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
-        <SheetContent side="right" className="w-full sm:w-[450px] sm:max-w-[450px] p-0 flex flex-col h-full overflow-hidden">
+        <SheetContent side="right" className="w-full sm:w-[520px] sm:max-w-[520px] p-0 flex flex-col h-full overflow-hidden">
           <SheetHeader className="p-3 sm:p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between">
               <SheetTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
