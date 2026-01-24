@@ -1,13 +1,18 @@
-import { Bot, User } from 'lucide-react';
+import { useState } from 'react';
+import { Bot, User, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ChatMessage as ChatMessageType } from '@/contexts/ChatContext';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import type { ChatMessage as ChatMessageType } from '@/hooks/useChatMessages';
 import { ArticleSuggestionCard, type ArticleResult } from './ArticleSuggestionCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ChatMessageProps {
-  message: ChatMessageType;
+  message: ChatMessageType | { id: string; role: 'user' | 'assistant'; content: string; timestamp?: Date; isStreaming?: boolean };
   onAddArticle?: (article: ArticleResult) => void;
   addedArticleIds?: Set<string>;
+  onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
+  isEditing?: boolean;
 }
 
 // Parse message content for embedded article JSON
@@ -55,14 +60,60 @@ function parseArticlesFromContent(content: string): {
   return { textContent: textContent.trim(), articles };
 }
 
-export const ChatMessage = ({ message, onAddArticle, addedArticleIds }: ChatMessageProps) => {
+export const ChatMessage = ({ 
+  message, 
+  onAddArticle, 
+  addedArticleIds,
+  onEditMessage,
+  isEditing: externalEditing = false
+}: ChatMessageProps) => {
   const { language } = useLanguage();
   const isUser = message.role === 'user';
+  const [isEditing, setIsEditing] = useState(externalEditing);
+  const [editContent, setEditContent] = useState(message.content);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Parse articles from assistant messages
   const { textContent, articles } = isUser 
     ? { textContent: message.content, articles: [] }
     : parseArticlesFromContent(message.content);
+
+  const handleStartEdit = () => {
+    setEditContent(message.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditContent(message.content);
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!onEditMessage || editContent.trim() === message.content) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onEditMessage(message.id, editContent.trim());
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving edit:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const t = {
+    you: language === 'fr' ? 'Vous' : 'You',
+    edit: language === 'fr' ? 'Modifier' : 'Edit',
+    save: language === 'fr' ? 'Enregistrer et régénérer' : 'Save & Regenerate',
+    cancel: language === 'fr' ? 'Annuler' : 'Cancel',
+    articlesFound: (count: number) => language === 'fr' 
+      ? `${count} article(s) trouvé(s):`
+      : `${count} article(s) found:`,
+  };
   
   return (
     <div className={cn(
@@ -77,23 +128,69 @@ export const ChatMessage = ({ message, onAddArticle, addedArticleIds }: ChatMess
       </div>
       
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium mb-1">
-          {isUser ? (language === 'fr' ? 'Vous' : 'You') : 'ProofCheck AI'}
-        </div>
-        <div className="text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none">
-          {textContent}
-          {message.isStreaming && (
-            <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-sm font-medium">
+            {isUser ? t.you : 'ProofCheck AI'}
+          </div>
+          {isUser && onEditMessage && !isEditing && !('isStreaming' in message && message.isStreaming) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleStartEdit}
+            >
+              <Pencil className="h-3 w-3 mr-1" />
+              {t.edit}
+            </Button>
           )}
         </div>
+
+        {isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="min-h-[80px] text-sm"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') handleCancelEdit();
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEdit();
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+              >
+                <X className="h-3 w-3 mr-1" />
+                {t.cancel}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEdit}
+                disabled={isSaving || editContent.trim() === message.content}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                {t.save}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none">
+            {isUser ? message.content : textContent}
+            {'isStreaming' in message && message.isStreaming && (
+              <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+            )}
+          </div>
+        )}
         
         {/* Render article suggestions if present */}
-        {articles.length > 0 && (
+        {articles.length > 0 && !isEditing && (
           <div className="mt-4 space-y-3">
             <p className="text-xs font-medium text-muted-foreground">
-              {language === 'fr' 
-                ? `${articles.length} article(s) trouvé(s):`
-                : `${articles.length} article(s) found:`}
+              {t.articlesFound(articles.length)}
             </p>
             <div className="grid gap-3">
               {articles.map((article) => (
