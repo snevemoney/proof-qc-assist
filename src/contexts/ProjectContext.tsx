@@ -1,6 +1,8 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useProjects, Project } from '@/hooks/useProjects';
 import { useChatSessions, ChatSession } from '@/hooks/useChatSessions';
+import { useProject } from '@/hooks/useProject';
+import { EvaluationCriterion } from '@/lib/evaluationTemplates';
 
 interface ProjectContextType {
   // Projects
@@ -22,6 +24,12 @@ interface ProjectContextType {
   renameSession: (sessionId: string, newName: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
   sessionsLoading: boolean;
+  
+  // Project-specific requirements
+  instructions: string;
+  evaluationGrid: EvaluationCriterion[];
+  setInstructions: (instructions: string) => void;
+  setEvaluationGrid: (grid: EvaluationCriterion[]) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -49,6 +57,13 @@ export const ProjectContextProvider = ({ children }: { children: ReactNode }) =>
     isLoading: sessionsLoading,
   } = useChatSessions(currentProjectId);
 
+  const {
+    instructions,
+    evaluationGrid,
+    setInstructions,
+    setEvaluationGrid,
+  } = useProject(currentProjectId);
+
   return (
     <ProjectContext.Provider value={{
       projects,
@@ -67,6 +82,10 @@ export const ProjectContextProvider = ({ children }: { children: ReactNode }) =>
       renameSession,
       deleteSession,
       sessionsLoading,
+      instructions,
+      evaluationGrid,
+      setInstructions,
+      setEvaluationGrid,
     }}>
       {children}
     </ProjectContext.Provider>

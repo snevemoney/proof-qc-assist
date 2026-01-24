@@ -131,8 +131,10 @@ export type Database = {
           claims: Json | null
           created_at: string | null
           draft_text: string | null
+          evaluation_grid: Json | null
           has_verified: boolean | null
           id: string
+          instructions: string | null
           interventions: Json | null
           name: string | null
           sources: Json | null
@@ -147,8 +149,10 @@ export type Database = {
           claims?: Json | null
           created_at?: string | null
           draft_text?: string | null
+          evaluation_grid?: Json | null
           has_verified?: boolean | null
           id?: string
+          instructions?: string | null
           interventions?: Json | null
           name?: string | null
           sources?: Json | null
@@ -163,8 +167,10 @@ export type Database = {
           claims?: Json | null
           created_at?: string | null
           draft_text?: string | null
+          evaluation_grid?: Json | null
           has_verified?: boolean | null
           id?: string
+          instructions?: string | null
           interventions?: Json | null
           name?: string | null
           sources?: Json | null
@@ -207,9 +213,13 @@ export type Database = {
           claims: Json
           created_at: string | null
           draft_text: string | null
+          evaluation_grid_snapshot: Json | null
           id: string
+          instructions_snapshot: string | null
           interventions: Json | null
           project_id: string | null
+          requirement_checks: Json | null
+          rubric_scores: Json | null
           sources_snapshot: Json | null
           strict_mode: boolean | null
           summary: Json | null
@@ -219,9 +229,13 @@ export type Database = {
           claims?: Json
           created_at?: string | null
           draft_text?: string | null
+          evaluation_grid_snapshot?: Json | null
           id?: string
+          instructions_snapshot?: string | null
           interventions?: Json | null
           project_id?: string | null
+          requirement_checks?: Json | null
+          rubric_scores?: Json | null
           sources_snapshot?: Json | null
           strict_mode?: boolean | null
           summary?: Json | null
@@ -231,9 +245,13 @@ export type Database = {
           claims?: Json
           created_at?: string | null
           draft_text?: string | null
+          evaluation_grid_snapshot?: Json | null
           id?: string
+          instructions_snapshot?: string | null
           interventions?: Json | null
           project_id?: string | null
+          requirement_checks?: Json | null
+          rubric_scores?: Json | null
           sources_snapshot?: Json | null
           strict_mode?: boolean | null
           summary?: Json | null

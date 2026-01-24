@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FileText, Edit3, BarChart3, Loader2 } from 'lucide-react';
+import { FileText, Edit3, BarChart3, Loader2, ClipboardList } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SourcesTab } from './SourcesTab';
 import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
+import { RequirementsTab } from './RequirementsTab';
 import { ChatPanel } from './ChatPanel';
 import { OnboardingModal } from './OnboardingModal';
 import { ReadinessIndicator } from './ReadinessIndicator';
@@ -300,11 +301,15 @@ const ProjectWorkspaceContent = () => {
       />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3 h-auto">
+        <TabsList className="grid w-full max-w-xl grid-cols-4 h-auto">
           <TabsTrigger value="sources" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
             <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="truncate">{t('tabs.sources')}</span>
             <span className="hidden xs:inline">({sources.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="requirements" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
+            <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">{t('tabs.requirements')}</span>
           </TabsTrigger>
           <TabsTrigger value="draft" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
             <Edit3 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
@@ -323,6 +328,10 @@ const ProjectWorkspaceContent = () => {
               onAddSources={handleAddSources}
               onDeleteSource={handleDeleteSource}
             />
+          </TabsContent>
+
+          <TabsContent value="requirements" className="mt-0">
+            <RequirementsTab />
           </TabsContent>
 
           <TabsContent value="draft" className="mt-0">

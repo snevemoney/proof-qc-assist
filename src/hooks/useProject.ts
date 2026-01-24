@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Source, Claim, Intervention, VerificationSummary } from '@/lib/verification';
 import type { Json } from '@/integrations/supabase/types';
+import { EvaluationCriterion } from '@/lib/evaluationTemplates';
 
 export interface ChatMessage {
   id: string;
@@ -22,6 +23,8 @@ export interface ProjectState {
   activeTab: string;
   strictMode: boolean;
   hasVerified: boolean;
+  instructions: string;
+  evaluationGrid: EvaluationCriterion[];
 }
 
 const DEMO_SOURCES: Source[] = [
@@ -55,6 +58,8 @@ const DEFAULT_STATE: ProjectState = {
   activeTab: 'sources',
   strictMode: false,
   hasVerified: false,
+  instructions: '',
+  evaluationGrid: [],
 };
 
 const STORAGE_KEY = 'proofcheck-project';
@@ -120,6 +125,8 @@ export const useProject = (projectId: string | null = null) => {
             activeTab: data.active_tab || 'sources',
             strictMode: data.strict_mode || false,
             hasVerified: data.has_verified || false,
+            instructions: (data as any).instructions || '',
+            evaluationGrid: ((data as any).evaluation_grid as unknown as EvaluationCriterion[]) || [],
           });
         } else {
           // New project - start with default state (empty for new projects)
@@ -189,6 +196,8 @@ export const useProject = (projectId: string | null = null) => {
             active_tab: newState.activeTab,
             strict_mode: newState.strictMode,
             has_verified: newState.hasVerified,
+            instructions: newState.instructions,
+            evaluation_grid: newState.evaluationGrid as unknown as Json,
             updated_at: new Date().toISOString(),
           };
 
@@ -392,6 +401,28 @@ export const useProject = (projectId: string | null = null) => {
     [saveProject]
   );
 
+  const setInstructions = useCallback(
+    (instructions: string) => {
+      setState((prev) => {
+        const newState = { ...prev, instructions };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
+  const setEvaluationGrid = useCallback(
+    (evaluationGrid: EvaluationCriterion[]) => {
+      setState((prev) => {
+        const newState = { ...prev, evaluationGrid };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
   // Batch update with immediate save (for verification results)
   const updateStateImmediate = useCallback(
     async (updates: Partial<ProjectState>) => {
@@ -419,6 +450,8 @@ export const useProject = (projectId: string | null = null) => {
     setActiveTab,
     setStrictMode,
     setHasVerified,
+    setInstructions,
+    setEvaluationGrid,
     updateState,
     updateStateImmediate,
   };
