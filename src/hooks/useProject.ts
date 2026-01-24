@@ -128,10 +128,15 @@ export const useProject = (projectId: string | null = null) => {
             evaluationGrid: ((data as any).evaluation_grid as unknown as EvaluationCriterion[]) || [],
             verificationLanguage: ((data as any).verification_language as 'fr' | 'en') || null,
             finalDraft: (data as any).final_draft || '',
-            finalDraftVersions: (((data as any).final_draft_versions as unknown as DraftVersion[]) || []).map((v) => ({
-              ...v,
-              timestamp: new Date(v.timestamp),
-            })),
+            finalDraftVersions: (() => {
+              const rawVersions = (data as any).final_draft_versions;
+              return Array.isArray(rawVersions)
+                ? rawVersions.map((v: DraftVersion) => ({
+                    ...v,
+                    timestamp: new Date(v.timestamp),
+                  }))
+                : [];
+            })(),
           });
         } else {
           // New project - start with default state (empty for new projects)
@@ -148,12 +153,15 @@ export const useProject = (projectId: string | null = null) => {
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
+            const rawVersions = parsed.finalDraftVersions;
             setState({
               ...parsed,
-              finalDraftVersions: (parsed.finalDraftVersions || []).map((v: DraftVersion) => ({
-                ...v,
-                timestamp: new Date(v.timestamp),
-              })),
+              finalDraftVersions: Array.isArray(rawVersions)
+                ? rawVersions.map((v: DraftVersion) => ({
+                    ...v,
+                    timestamp: new Date(v.timestamp),
+                  }))
+                : [],
             });
           } catch (e) {
             console.error('Error parsing stored project:', e);
@@ -199,10 +207,10 @@ export const useProject = (projectId: string | null = null) => {
             instructions: newState.instructions,
             evaluation_grid: newState.evaluationGrid as unknown as Json,
             verification_language: newState.verificationLanguage,
-            final_draft: newState.finalDraft,
-            final_draft_versions: newState.finalDraftVersions.map((v) => ({
+            final_draft: newState.finalDraft || '',
+            final_draft_versions: (newState.finalDraftVersions || []).map((v) => ({
               ...v,
-              timestamp: v.timestamp.toISOString(),
+              timestamp: v.timestamp?.toISOString?.() || new Date().toISOString(),
             })) as unknown as Json,
             updated_at: new Date().toISOString(),
           };
@@ -245,9 +253,9 @@ export const useProject = (projectId: string | null = null) => {
           const storageKey = projectId ? `${STORAGE_KEY}-${projectId}` : STORAGE_KEY;
           localStorage.setItem(storageKey, JSON.stringify({
             ...newState,
-            finalDraftVersions: newState.finalDraftVersions.map((v) => ({
+            finalDraftVersions: (newState.finalDraftVersions || []).map((v) => ({
               ...v,
-              timestamp: v.timestamp.toISOString(),
+              timestamp: v.timestamp?.toISOString?.() || new Date().toISOString(),
             })),
           }));
           console.log('Project saved to localStorage');

@@ -416,7 +416,7 @@ export const FinalDraftTab = ({
                 </div>
                 
                 {/* Version navigation */}
-                {versions.length > 1 && (
+                {(versions?.length ?? 0) > 1 && (
                   <div className="flex items-center gap-1 ml-2">
                     <Button
                       variant="ghost"
