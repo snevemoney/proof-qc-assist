@@ -162,18 +162,22 @@ export const useFinalDraft = () => {
   }, [finalDraft, generateFinalDraft]);
 
   const goToPreviousVersion = useCallback(() => {
-    if (currentVersionIndex > 0) {
+    if (currentVersionIndex > 0 && versions.length > 0) {
       const prevIndex = currentVersionIndex - 1;
-      setCurrentVersionIndex(prevIndex);
-      setFinalDraft(versions[prevIndex].text);
+      if (versions[prevIndex]?.text) {
+        setCurrentVersionIndex(prevIndex);
+        setFinalDraft(versions[prevIndex].text);
+      }
     }
   }, [currentVersionIndex, versions]);
 
   const goToNextVersion = useCallback(() => {
-    if (currentVersionIndex < versions.length - 1) {
+    if (currentVersionIndex < versions.length - 1 && versions.length > 0) {
       const nextIndex = currentVersionIndex + 1;
-      setCurrentVersionIndex(nextIndex);
-      setFinalDraft(versions[nextIndex].text);
+      if (versions[nextIndex]?.text) {
+        setCurrentVersionIndex(nextIndex);
+        setFinalDraft(versions[nextIndex].text);
+      }
     }
   }, [currentVersionIndex, versions]);
 

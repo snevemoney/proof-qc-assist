@@ -19,8 +19,21 @@ export interface DiffResult {
  * Returns segments for both original and modified text with change markers
  */
 export function computeWordDiff(original: string, modified: string): DiffResult {
-  const originalWords = tokenize(original);
-  const modifiedWords = tokenize(modified);
+  // Defensive check - ensure both inputs are valid strings
+  const safeOriginal = original ?? '';
+  const safeModified = modified ?? '';
+  
+  const originalWords = tokenize(safeOriginal);
+  const modifiedWords = tokenize(safeModified);
+  
+  // Handle empty cases explicitly
+  if (originalWords.length === 0 && modifiedWords.length === 0) {
+    return {
+      originalSegments: [],
+      modifiedSegments: [],
+      stats: { addedWords: 0, removedWords: 0, unchangedWords: 0, changePercent: 0 }
+    };
+  }
   
   // Build LCS (Longest Common Subsequence) matrix
   const lcs = buildLCSMatrix(originalWords, modifiedWords);

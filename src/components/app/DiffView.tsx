@@ -11,8 +11,16 @@ interface DiffViewProps {
 
 export const DiffView = ({ original, modified, language }: DiffViewProps) => {
   const diff = useMemo(() => {
-    if (!original || !modified) return null;
-    return computeWordDiff(original, modified);
+    // Stricter type checks - handle undefined, null, and empty strings
+    if (typeof original !== 'string' || typeof modified !== 'string') return null;
+    if (!original.trim() || !modified.trim()) return null;
+    
+    try {
+      return computeWordDiff(original, modified);
+    } catch (error) {
+      console.error('Diff computation failed:', error);
+      return null;
+    }
   }, [original, modified]);
 
   if (!diff) {
