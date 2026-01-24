@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Claim, Intervention, VerificationSummary, Source } from '@/lib/verification';
+import { Claim, Intervention, VerificationSummary, Source, RequirementCheck, RubricScore } from '@/lib/verification';
 import type { Json } from '@/integrations/supabase/types';
 
 export interface VerificationHistoryEntry {
@@ -9,6 +9,8 @@ export interface VerificationHistoryEntry {
   claims: Claim[];
   interventions: Intervention[];
   summary: VerificationSummary | null;
+  requirementChecks: RequirementCheck[];
+  rubricScores: RubricScore[];
   draftText: string;
   sourcesSnapshot: Source[];
   strictMode: boolean;
@@ -45,6 +47,8 @@ export const useVerificationHistory = () => {
         claims: (row.claims as unknown as Claim[]) || [],
         interventions: ((row as any).interventions as unknown as Intervention[]) || [],
         summary: row.summary as unknown as VerificationSummary | null,
+        requirementChecks: ((row as any).requirement_checks as unknown as RequirementCheck[]) || [],
+        rubricScores: ((row as any).rubric_scores as unknown as RubricScore[]) || [],
         draftText: row.draft_text || '',
         sourcesSnapshot: (row.sources_snapshot as unknown as Source[]) || [],
         strictMode: row.strict_mode || false,
@@ -83,6 +87,8 @@ export const useVerificationHistory = () => {
             claims: entry.claims as unknown as Json,
             interventions: entry.interventions as unknown as Json,
             summary: entry.summary as unknown as Json,
+            requirement_checks: entry.requirementChecks as unknown as Json,
+            rubric_scores: entry.rubricScores as unknown as Json,
             draft_text: entry.draftText,
             sources_snapshot: entry.sourcesSnapshot as unknown as Json,
             strict_mode: entry.strictMode,

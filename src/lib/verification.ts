@@ -59,10 +59,29 @@ export interface VerificationSummary {
   interventionsWithRationale: number;
 }
 
+export interface RequirementCheck {
+  id: string;
+  instruction: string;
+  status: 'met' | 'partial' | 'not_met' | 'unable_to_verify';
+  evidence?: string;
+  suggestion?: string;
+}
+
+export interface RubricScore {
+  criterionId: string;
+  criterionName: string;
+  estimatedScore: number;
+  maxScore: number;
+  feedback?: string;
+  improvements?: string[];
+}
+
 export interface VerificationResult {
   claims: Claim[];
   interventions: Intervention[];
   summary: VerificationSummary;
+  requirementChecks?: RequirementCheck[];
+  rubricScores?: RubricScore[];
 }
 
 // Retry configuration

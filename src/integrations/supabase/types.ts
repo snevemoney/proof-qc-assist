@@ -137,6 +137,8 @@ export type Database = {
           instructions: string | null
           interventions: Json | null
           name: string | null
+          requirement_checks: Json | null
+          rubric_scores: Json | null
           sources: Json | null
           strict_mode: boolean | null
           summary: Json | null
@@ -156,6 +158,8 @@ export type Database = {
           instructions?: string | null
           interventions?: Json | null
           name?: string | null
+          requirement_checks?: Json | null
+          rubric_scores?: Json | null
           sources?: Json | null
           strict_mode?: boolean | null
           summary?: Json | null
@@ -175,6 +179,8 @@ export type Database = {
           instructions?: string | null
           interventions?: Json | null
           name?: string | null
+          requirement_checks?: Json | null
+          rubric_scores?: Json | null
           sources?: Json | null
           strict_mode?: boolean | null
           summary?: Json | null
