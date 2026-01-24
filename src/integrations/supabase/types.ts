@@ -133,6 +133,7 @@ export type Database = {
           draft_text: string | null
           has_verified: boolean | null
           id: string
+          interventions: Json | null
           name: string | null
           sources: Json | null
           strict_mode: boolean | null
@@ -148,6 +149,7 @@ export type Database = {
           draft_text?: string | null
           has_verified?: boolean | null
           id?: string
+          interventions?: Json | null
           name?: string | null
           sources?: Json | null
           strict_mode?: boolean | null
@@ -163,6 +165,7 @@ export type Database = {
           draft_text?: string | null
           has_verified?: boolean | null
           id?: string
+          interventions?: Json | null
           name?: string | null
           sources?: Json | null
           strict_mode?: boolean | null
@@ -205,6 +208,7 @@ export type Database = {
           created_at: string | null
           draft_text: string | null
           id: string
+          interventions: Json | null
           project_id: string | null
           sources_snapshot: Json | null
           strict_mode: boolean | null
@@ -216,6 +220,7 @@ export type Database = {
           created_at?: string | null
           draft_text?: string | null
           id?: string
+          interventions?: Json | null
           project_id?: string | null
           sources_snapshot?: Json | null
           strict_mode?: boolean | null
@@ -227,6 +232,7 @@ export type Database = {
           created_at?: string | null
           draft_text?: string | null
           id?: string
+          interventions?: Json | null
           project_id?: string | null
           sources_snapshot?: Json | null
           strict_mode?: boolean | null
