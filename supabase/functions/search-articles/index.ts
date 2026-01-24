@@ -8,6 +8,14 @@ const corsHeaders = {
 interface SearchRequest {
   query: string;
   language: 'fr' | 'en';
+  searchMode?: 'natural' | 'keywords' | 'pico';
+  keywordData?: {
+    keywords: string[];
+    meshTerms: string[];
+    operator: 'AND' | 'OR';
+    studyType?: string;
+    recency?: string;
+  };
   context?: {
     draftTopic?: string;
     existingSources?: string[];
@@ -15,7 +23,7 @@ interface SearchRequest {
   };
   filters?: {
     studyType?: string;
-    recency?: 'week' | 'month' | 'year' | '5years' | 'all';
+    recency?: 'week' | 'month' | 'year' | '5years' | '10years' | 'all';
     expandedMode?: boolean;
   };
 }
@@ -112,7 +120,7 @@ serve(async (req) => {
   }
   
   try {
-    const { query, language, context, filters }: SearchRequest = await req.json();
+    const { query, language, context, filters, searchMode, keywordData }: SearchRequest = await req.json();
     
     const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
     if (!PERPLEXITY_API_KEY) {
@@ -126,9 +134,73 @@ serve(async (req) => {
       });
     }
     
-    // Build the search prompt
-    const systemPrompt = language === 'fr'
-      ? `Vous êtes un assistant de recherche académique spécialisé. Recherchez des articles académiques pertinents et retournez les résultats en format JSON structuré.
+    // Determine if this is a keyword-based search
+    const isKeywordSearch = searchMode === 'keywords' && keywordData;
+    
+    // Build the search prompt based on search mode
+    let systemPrompt: string;
+    
+    if (isKeywordSearch) {
+      // Keyword/MeSH-based search prompt
+      systemPrompt = language === 'fr'
+        ? `Vous êtes un assistant de recherche académique spécialisé en sciences infirmières.
+Recherchez des articles académiques en utilisant EXACTEMENT les termes MeSH fournis.
+
+MÉTHODOLOGIE:
+- Utilisez les termes MeSH exacts fournis dans la requête
+- Priorisez les sources CINAHL, PubMed Nursing Subset et Cochrane Nursing
+- Recherchez dans les bases de données infirmières québécoises et canadiennes (Érudit, OIIQ, INESSS)
+- Appliquez les opérateurs booléens (AND/OR) comme spécifié
+
+Pour chaque article trouvé, extrayez:
+- title: titre complet
+- authors: auteurs (max 3, puis "et coll.")
+- year: année de publication
+- journal: nom de la revue
+- abstract: résumé court (2-3 phrases)
+- keyFindings: 2-4 résultats clés (array)
+- studyType: type d'étude (systematic review, meta-analysis, RCT, cohort study, qualitative, etc.)
+- doi: identifiant DOI
+- pubmedId: ID PubMed
+- url: lien vers l'article
+- relevanceExplanation: pourquoi cet article est pertinent
+
+IMPORTANT:
+- UNIQUEMENT des articles avec DOI ou PubMed ID vérifiables
+- Priorisez les revues systématiques, méta-analyses et ECR
+- Limitez à 5-8 articles les plus pertinents
+- Retournez UNIQUEMENT le JSON, pas de texte supplémentaire`
+        : `You are a specialized academic research assistant for nursing sciences.
+Search for academic articles using EXACTLY the provided MeSH terms.
+
+METHODOLOGY:
+- Use the exact MeSH terms provided in the query
+- Prioritize CINAHL, PubMed Nursing Subset and Cochrane Nursing sources
+- Search Canadian and Quebec nursing databases (Érudit, OIIQ, INESSS)
+- Apply Boolean operators (AND/OR) as specified
+
+For each article found, extract:
+- title: complete article title
+- authors: authors (max 3, then "et al.")
+- year: publication year
+- journal: journal name
+- abstract: short summary (2-3 sentences)
+- keyFindings: 2-4 key findings (array)
+- studyType: study type (systematic review, meta-analysis, RCT, cohort study, qualitative, etc.)
+- doi: DOI identifier
+- pubmedId: PubMed ID
+- url: link to article
+- relevanceExplanation: why this article is relevant
+
+IMPORTANT:
+- ONLY articles with verifiable DOI or PubMed ID
+- Prioritize systematic reviews, meta-analyses and RCTs
+- Limit to 5-8 most relevant articles
+- Return ONLY JSON, no additional text`;
+    } else {
+      // Natural language search prompt (original)
+      systemPrompt = language === 'fr'
+        ? `Vous êtes un assistant de recherche académique spécialisé en sciences infirmières. Recherchez des articles académiques pertinents et retournez les résultats en format JSON structuré.
 
 Pour chaque article trouvé, extrayez:
 - title: titre complet de l'article
@@ -144,11 +216,12 @@ Pour chaque article trouvé, extrayez:
 - relevanceExplanation: pourquoi cet article est pertinent pour la requête
 
 IMPORTANT: 
+- Priorisez CINAHL, PubMed Nursing Subset et Cochrane pour les sources infirmières
 - Priorisez les sources vérifiables avec DOI ou PubMed ID
 - Incluez uniquement des articles académiques réels et vérifiables
 - Limitez à 5-8 articles les plus pertinents
 - Retournez UNIQUEMENT le JSON, pas de texte supplémentaire`
-      : `You are a specialized academic research assistant. Search for relevant academic articles and return results in structured JSON format.
+        : `You are a specialized academic research assistant for nursing sciences. Search for relevant academic articles and return results in structured JSON format.
 
 For each article found, extract:
 - title: complete article title
@@ -164,14 +237,35 @@ For each article found, extract:
 - relevanceExplanation: why this article is relevant to the query
 
 IMPORTANT:
+- Prioritize CINAHL, PubMed Nursing Subset and Cochrane for nursing sources
 - Prioritize verifiable sources with DOI or PubMed ID
 - Include only real, verifiable academic articles
 - Limit to 5-8 most relevant articles
 - Return ONLY JSON, no additional text`;
+    }
 
     // Build context-aware query
     let enhancedQuery = query;
-    if (context) {
+    
+    // For keyword search, build a structured query
+    if (isKeywordSearch && keywordData) {
+      const meshTermsStr = keywordData.meshTerms.join(` ${keywordData.operator} `);
+      const keywordsStr = keywordData.keywords.join(` ${keywordData.operator} `);
+      enhancedQuery = meshTermsStr || keywordsStr;
+      
+      // Add study type filter to query
+      if (keywordData.studyType) {
+        const studyTypeMap: Record<string, string> = {
+          'systematic-review': 'systematic review',
+          'meta-analysis': 'meta-analysis',
+          'rct': 'randomized controlled trial',
+          'cohort': 'cohort study',
+          'qualitative': 'qualitative study',
+          'guideline': 'clinical guideline',
+        };
+        enhancedQuery += ` AND (${studyTypeMap[keywordData.studyType] || keywordData.studyType})`;
+      }
+    } else if (context) {
       if (context.draftTopic) {
         enhancedQuery += ` (related to: ${context.draftTopic})`;
       }
@@ -180,16 +274,18 @@ IMPORTANT:
       }
     }
     
-    // Apply recency filter
+    // Apply recency filter (from keyword search or filters)
     let recencyFilter: string | undefined;
-    if (filters?.recency) {
+    const recencySource = (isKeywordSearch && keywordData?.recency) ? keywordData.recency : filters?.recency;
+    if (recencySource) {
       const recencyMap: Record<string, string> = {
         'week': 'week',
         'month': 'month',
         'year': 'year',
-        '5years': undefined as unknown as string, // Perplexity doesn't have 5 years, we'll handle in prompt
+        '5years': 'year', // Perplexity doesn't have 5 years, use year as fallback
+        '10years': 'year', // Perplexity doesn't have 10 years, use year as fallback
       };
-      recencyFilter = recencyMap[filters.recency];
+      recencyFilter = recencyMap[recencySource];
     }
     
     const perplexityBody: Record<string, unknown> = {
@@ -222,17 +318,26 @@ Return a JSON object with this structure:
       ],
       search_mode: 'academic',
       search_domain_filter: [
+        // Nursing-specific databases
         'pubmed.ncbi.nlm.nih.gov',
+        'cinahl.com',
+        'ebscohost.com',
+        'cochranelibrary.com',
+        'jbi.global',
+        // General academic
         'scholar.google.com',
         'sciencedirect.com',
         'springer.com',
         'nature.com',
-        'cochranelibrary.com',
+        'wiley.com',
         'jstor.org',
         'researchgate.net',
+        // Quebec/Canada nursing
         'erudit.org',
         'inesss.qc.ca',
         'inspq.qc.ca',
+        'oiiq.org',
+        'cna-aiic.ca',
       ],
     };
     

@@ -152,11 +152,35 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     // Handle context-aware search markers
     let displayContent = content;
     let searchQuery = content;
+    let searchMode: 'natural' | 'keywords' | 'pico' = 'natural';
+    let keywordData: { keywords: string[]; meshTerms: string[]; operator: 'AND' | 'OR'; studyType?: string; recency?: string } | undefined;
     
+    // Handle KEYWORD search
+    if (content.startsWith('__KEYWORD_SEARCH__')) {
+      try {
+        const kwData = JSON.parse(content.replace('__KEYWORD_SEARCH__', ''));
+        keywordData = kwData;
+        searchMode = 'keywords';
+        
+        // Create user-friendly display
+        const keywordList = kwData.keywords.join(', ');
+        displayContent = language === 'fr'
+          ? `🔑 Recherche par mots-clés:\n• Termes: ${keywordList}\n• Opérateur: ${kwData.operator}${kwData.studyType ? `\n• Type: ${kwData.studyType}` : ''}${kwData.recency ? `\n• Récence: ${kwData.recency}` : ''}`
+          : `🔑 Keyword Search:\n• Terms: ${keywordList}\n• Operator: ${kwData.operator}${kwData.studyType ? `\n• Type: ${kwData.studyType}` : ''}${kwData.recency ? `\n• Recency: ${kwData.recency}` : ''}`;
+        
+        // Build searchQuery from MeSH terms or keywords
+        searchQuery = kwData.meshTerms.length > 0 
+          ? kwData.meshTerms.join(` ${kwData.operator} `)
+          : kwData.keywords.join(` ${kwData.operator} `);
+      } catch {
+        searchQuery = content.replace('__KEYWORD_SEARCH__', '');
+      }
+    }
     // Handle PICO search
-    if (content.startsWith('__PICO_SEARCH__')) {
+    else if (content.startsWith('__PICO_SEARCH__')) {
       try {
         const picoData = JSON.parse(content.replace('__PICO_SEARCH__', ''));
+        searchMode = 'pico';
         const parts: string[] = [];
         
         if (picoData.population) parts.push(`Population: ${picoData.population}`);
@@ -267,6 +291,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           body: JSON.stringify({
             query: searchQuery,
             language,
+            searchMode,
+            keywordData,
             context: {
               draftTopic: projectContext.draftText.substring(0, 500),
               existingSources: projectContext.sources.map(s => s.title),
