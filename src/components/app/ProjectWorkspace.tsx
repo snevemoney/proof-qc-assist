@@ -6,7 +6,7 @@ import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
 import { ChatPanel } from './ChatPanel';
 import { OnboardingModal } from './OnboardingModal';
-import { SubmissionReadiness } from './SubmissionReadiness';
+import { ReadinessIndicator } from './ReadinessIndicator';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
@@ -25,6 +25,7 @@ const ProjectWorkspaceContent = () => {
     sources,
     draftText,
     claims,
+    interventions,
     summary,
     chatMessages,
     activeTab,
@@ -35,6 +36,7 @@ const ProjectWorkspaceContent = () => {
     setSources,
     setDraftText,
     setClaims,
+    setInterventions,
     setSummary,
     setChatMessages,
     setActiveTab,
@@ -49,8 +51,8 @@ const ProjectWorkspaceContent = () => {
 
   // Sync project context with chat
   useEffect(() => {
-    setProjectContext({ sources, draftText, claims, summary });
-  }, [sources, draftText, claims, summary, setProjectContext]);
+    setProjectContext({ sources, draftText, claims, interventions, summary });
+  }, [sources, draftText, claims, interventions, summary, setProjectContext]);
 
   // Load chat messages from project
   useEffect(() => {
@@ -77,6 +79,7 @@ const ProjectWorkspaceContent = () => {
   const handleRestoreHistory = (entry: VerificationHistoryEntry) => {
     // Restore the verification state from history
     setClaims(entry.claims);
+    setInterventions((entry as any).interventions || []);
     setSummary(entry.summary);
     setSources(entry.sourcesSnapshot);
     setDraftText(entry.draftText);
@@ -108,6 +111,7 @@ const ProjectWorkspaceContent = () => {
       // Update state except activeTab, then switch tab after a brief delay
       await updateStateImmediate({
         claims: result.claims,
+        interventions: result.interventions || [],
         summary: result.summary,
         hasVerified: true,
       });
@@ -122,6 +126,7 @@ const ProjectWorkspaceContent = () => {
       // Save to history for logged-in users
       await saveToHistory({
         claims: result.claims,
+        interventions: result.interventions || [],
         summary: result.summary,
         draftText,
         sourcesSnapshot: sources,
@@ -170,8 +175,10 @@ const ProjectWorkspaceContent = () => {
       )}
       
       {/* Submission Readiness Progress Bar */}
-      <SubmissionReadiness 
-        claims={claims} 
+      <ReadinessIndicator 
+        claims={claims}
+        interventions={interventions}
+        summary={summary}
         hasVerified={hasVerified}
         onNavigateToReport={() => setActiveTab('report')}
       />
@@ -221,6 +228,7 @@ const ProjectWorkspaceContent = () => {
             <ReportTab
               hasVerified={hasVerified}
               claims={claims}
+              interventions={interventions}
               summary={summary}
               sourcesCount={sources.length}
               draftLength={draftText.length}

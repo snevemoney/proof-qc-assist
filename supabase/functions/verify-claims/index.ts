@@ -20,7 +20,7 @@ interface VerifyRequest {
   language: 'fr' | 'en';
 }
 
-const systemPromptEN = `You are an academic verification assistant for Quebec university students. Your task is to verify claims in a student's draft against their uploaded sources.
+const systemPromptEN = `You are an academic verification assistant for Quebec university nursing students. Your task is to verify claims AND nursing interventions in a student's draft against their uploaded sources.
 
 CRITICAL RULES:
 1. ONLY verify claims against the provided source documents - NEVER use external knowledge
@@ -42,11 +42,25 @@ For each claim you identify, classify it as:
 - "unsupported": Claim cannot be verified from the provided sources (no evidence found)
 - "contradicted": The sources directly contradict this claim
 
+NURSING INTERVENTION IDENTIFICATION:
+In addition to general claims, identify nursing interventions in care plans. An intervention is a clinical action the nurse will perform.
+
+Look for interventions indicated by:
+- Action verbs: "administer", "monitor", "assess", "educate", "position", "reposition", "implement", "apply", "provide", "perform"
+- Care plan language: "nursing intervention", "will provide", "patient will receive"
+- Clinical actions: medication administration, vital signs monitoring, patient education, wound care, mobility assistance, pain management
+
+For each intervention, evaluate:
+1. hasEvidence: Is this intervention supported by research evidence in the sources? (true/false)
+2. hasRationale: Does the student explain WHY this intervention is clinically appropriate? (true/false)
+3. rationaleText: Extract the rationale if present
+4. suggestion: Helpful suggestion if evidence or rationale is missing
+
 STRICT MODE: When strict mode is enabled, require explicit citations and direct quotes. Without strict mode, allow reasonable paraphrasing.
 
 Respond using the suggest_claims tool with your analysis.`;
 
-const systemPromptFR = `Vous êtes un assistant de vérification académique pour les étudiants universitaires du Québec. Votre tâche est de vérifier les affirmations dans le brouillon d'un étudiant par rapport à ses sources téléchargées.
+const systemPromptFR = `Vous êtes un assistant de vérification académique pour les étudiants en sciences infirmières des universités du Québec. Votre tâche est de vérifier les affirmations ET les interventions infirmières dans le brouillon d'un étudiant par rapport à ses sources téléchargées.
 
 RÈGLES CRITIQUES:
 1. Vérifiez UNIQUEMENT les affirmations par rapport aux documents sources fournis - N'utilisez JAMAIS de connaissances externes
@@ -67,6 +81,20 @@ Pour chaque affirmation identifiée, classifiez-la comme:
 - "partial": L'affirmation est partiellement soutenue mais manque de nuance ou de contexte complet
 - "unsupported": L'affirmation ne peut pas être vérifiée à partir des sources fournies
 - "contradicted": Les sources contredisent directement cette affirmation
+
+IDENTIFICATION DES INTERVENTIONS INFIRMIÈRES:
+En plus des affirmations générales, identifiez les interventions infirmières dans les plans de soins. Une intervention est une action clinique que l'infirmière effectuera.
+
+Recherchez les interventions indiquées par:
+- Verbes d'action: "administrer", "surveiller", "évaluer", "éduquer", "positionner", "repositionner", "implémenter", "appliquer", "fournir", "effectuer"
+- Langage de plan de soins: "intervention infirmière", "fournira", "le patient recevra"
+- Actions cliniques: administration de médicaments, surveillance des signes vitaux, éducation du patient, soins des plaies, aide à la mobilité, gestion de la douleur
+
+Pour chaque intervention, évaluez:
+1. hasEvidence: Cette intervention est-elle soutenue par des preuves de recherche dans les sources? (vrai/faux)
+2. hasRationale: L'étudiant explique-t-il POURQUOI cette intervention est cliniquement appropriée? (vrai/faux)
+3. rationaleText: Extrayez la justification si présente
+4. suggestion: Suggestion utile si la preuve ou la justification manque
 
 MODE STRICT: Lorsque le mode strict est activé, exigez des citations explicites et des citations directes. Sans mode strict, autorisez une paraphrase raisonnable.
 
@@ -116,7 +144,7 @@ ${sourcesContext}
 ${language === 'fr' ? 'BROUILLON DE L\'ÉTUDIANT À VÉRIFIER' : 'STUDENT DRAFT TO VERIFY'}:
 ${draftText}
 
-${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources.' : 'Analyze the draft and identify each verifiable claim. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources.'}`;
+${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -136,7 +164,7 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
             type: "function",
             function: {
               name: "suggest_claims",
-              description: "Return the verification results for all claims found in the draft",
+              description: "Return the verification results for all claims and interventions found in the draft",
               parameters: {
                 type: "object",
                 properties: {
@@ -171,6 +199,40 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                       additionalProperties: false
                     }
                   },
+                  interventions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        text: {
+                          type: "string",
+                          description: "The nursing intervention text from the student's draft"
+                        },
+                        hasEvidence: {
+                          type: "boolean",
+                          description: "Whether this intervention is supported by research evidence in the sources"
+                        },
+                        hasRationale: {
+                          type: "boolean",
+                          description: "Whether the student explains WHY this intervention is clinically appropriate"
+                        },
+                        sourceRef: {
+                          type: "string",
+                          description: "Source reference like [S1] if evidence is found"
+                        },
+                        rationaleText: {
+                          type: "string",
+                          description: "The extracted rationale text if present"
+                        },
+                        suggestion: {
+                          type: "string",
+                          description: "Helpful suggestion for the student if evidence or rationale is missing"
+                        }
+                      },
+                      required: ["text", "hasEvidence", "hasRationale"],
+                      additionalProperties: false
+                    }
+                  },
                   summary: {
                     type: "object",
                     properties: {
@@ -179,13 +241,16 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                       partial: { type: "number" },
                       unsupported: { type: "number" },
                       contradicted: { type: "number" },
-                      overallFeedback: { type: "string" }
+                      overallFeedback: { type: "string" },
+                      totalInterventions: { type: "number" },
+                      interventionsWithEvidence: { type: "number" },
+                      interventionsWithRationale: { type: "number" }
                     },
-                    required: ["totalClaims", "supported", "partial", "unsupported", "contradicted"],
+                    required: ["totalClaims", "supported", "partial", "unsupported", "contradicted", "totalInterventions", "interventionsWithEvidence", "interventionsWithRationale"],
                     additionalProperties: false
                   }
                 },
-                required: ["claims", "summary"],
+                required: ["claims", "interventions", "summary"],
                 additionalProperties: false
               }
             }
@@ -236,10 +301,25 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
       id: `claim-${Date.now()}-${index}`,
     }));
 
+    // Add unique IDs to interventions
+    const interventionsWithIds = (result.interventions || []).map((intervention: any, index: number) => ({
+      ...intervention,
+      id: `intervention-${Date.now()}-${index}`,
+    }));
+
+    // Ensure summary has intervention fields (fallback for edge cases)
+    const summary = {
+      ...result.summary,
+      totalInterventions: result.summary.totalInterventions ?? interventionsWithIds.length,
+      interventionsWithEvidence: result.summary.interventionsWithEvidence ?? interventionsWithIds.filter((i: any) => i.hasEvidence).length,
+      interventionsWithRationale: result.summary.interventionsWithRationale ?? interventionsWithIds.filter((i: any) => i.hasRationale).length,
+    };
+
     return new Response(
       JSON.stringify({ 
-        claims: claimsWithIds, 
-        summary: result.summary 
+        claims: claimsWithIds,
+        interventions: interventionsWithIds,
+        summary 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

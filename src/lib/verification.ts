@@ -32,6 +32,16 @@ export interface Claim {
   suggestion?: string;
 }
 
+export interface Intervention {
+  id: string;
+  text: string;
+  hasEvidence: boolean;
+  hasRationale: boolean;
+  sourceRef?: string;
+  rationaleText?: string;
+  suggestion?: string;
+}
+
 export interface VerificationSummary {
   totalClaims: number;
   supported: number;
@@ -39,10 +49,15 @@ export interface VerificationSummary {
   unsupported: number;
   contradicted: number;
   overallFeedback?: string;
+  // Intervention tracking
+  totalInterventions: number;
+  interventionsWithEvidence: number;
+  interventionsWithRationale: number;
 }
 
 export interface VerificationResult {
   claims: Claim[];
+  interventions: Intervention[];
   summary: VerificationSummary;
 }
 

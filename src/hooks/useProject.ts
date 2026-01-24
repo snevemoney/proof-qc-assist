@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Source, Claim, VerificationSummary } from '@/lib/verification';
+import { Source, Claim, Intervention, VerificationSummary } from '@/lib/verification';
 import type { Json } from '@/integrations/supabase/types';
 
 export interface ChatMessage {
@@ -16,6 +16,7 @@ export interface ProjectState {
   sources: Source[];
   draftText: string;
   claims: Claim[];
+  interventions: Intervention[];
   summary: VerificationSummary | null;
   chatMessages: ChatMessage[];
   activeTab: string;
@@ -48,6 +49,7 @@ const DEFAULT_STATE: ProjectState = {
   sources: DEMO_SOURCES,
   draftText: '',
   claims: [],
+  interventions: [],
   summary: null,
   chatMessages: [],
   activeTab: 'sources',
@@ -91,6 +93,7 @@ export const useProject = () => {
             sources: (data.sources as unknown as Source[]) || [],
             draftText: data.draft_text || '',
             claims: (data.claims as unknown as Claim[]) || [],
+            interventions: ((data as any).interventions as unknown as Intervention[]) || [],
             summary: data.summary as unknown as VerificationSummary | null,
             chatMessages: ((data.chat_messages as unknown as ChatMessage[]) || []).map((msg) => ({
               ...msg,
@@ -163,6 +166,7 @@ export const useProject = () => {
             sources: newState.sources as unknown as Json,
             draft_text: newState.draftText,
             claims: newState.claims as unknown as Json,
+            interventions: newState.interventions as unknown as Json,
             summary: newState.summary as unknown as Json,
             chat_messages: chatMessagesJson,
             active_tab: newState.activeTab,
@@ -287,6 +291,17 @@ export const useProject = () => {
     [saveProject]
   );
 
+  const setInterventions = useCallback(
+    (interventions: Intervention[]) => {
+      setState((prev) => {
+        const newState = { ...prev, interventions };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
   const setSummary = useCallback(
     (summary: VerificationSummary | null) => {
       setState((prev) => {
@@ -364,6 +379,7 @@ export const useProject = () => {
     setSources,
     setDraftText,
     setClaims,
+    setInterventions,
     setSummary,
     setChatMessages,
     setActiveTab,

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
-import type { Source, Claim, VerificationSummary } from '@/lib/verification';
+import type { Source, Claim, Intervention, VerificationSummary } from '@/lib/verification';
 import type { ArticleResult } from '@/components/app/ArticleSuggestionCard';
 
 export interface ChatMessage {
@@ -26,12 +26,14 @@ interface ChatContextType {
     sources: Source[];
     draftText: string;
     claims: Claim[];
+    interventions: Intervention[];
     summary: VerificationSummary | null;
   };
   setProjectContext: (context: {
     sources: Source[];
     draftText: string;
     claims: Claim[];
+    interventions: Intervention[];
     summary: VerificationSummary | null;
   }) => void;
   onAddSources?: (sources: Source[]) => void;
@@ -61,11 +63,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     sources: Source[];
     draftText: string;
     claims: Claim[];
+    interventions: Intervention[];
     summary: VerificationSummary | null;
   }>({
     sources: [],
     draftText: '',
     claims: [],
+    interventions: [],
     summary: null,
   });
 
