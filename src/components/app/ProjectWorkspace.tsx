@@ -7,7 +7,7 @@ import { ReportTab } from './ReportTab';
 import { ChatPanel } from './ChatPanel';
 import { OnboardingModal } from './OnboardingModal';
 import { ReadinessIndicator } from './ReadinessIndicator';
-
+import { AuthModal } from '@/components/auth/AuthModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { useProjectContext } from '@/contexts/ProjectContext';
@@ -54,6 +54,9 @@ const ProjectWorkspaceContent = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<VerificationError | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isTransitioningToReport, setIsTransitioningToReport] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Reset stale verification flag for logged-in users when history is empty
   // Skip for anonymous users since they don't have history persistence
@@ -197,9 +200,18 @@ const ProjectWorkspaceContent = () => {
         document.activeElement.blur();
       }
       
+      // Show loading state during transition
+      setIsTransitioningToReport(true);
+      
       // Increased delay before tab switch to let portals properly unmount
       setTimeout(() => {
         setActiveTab('report');
+        setIsTransitioningToReport(false);
+        
+        // Show auth prompt for anonymous users after transition
+        if (!user) {
+          setShowAuthPrompt(true);
+        }
       }, 300);
       
       console.log('handleVerify: State updated and saved');
@@ -324,6 +336,7 @@ const ProjectWorkspaceContent = () => {
           <TabsContent value="report" className="mt-0">
             <ReportTab
               hasVerified={hasVerified}
+              isLoading={isTransitioningToReport}
               claims={claims}
               interventions={interventions}
               summary={summary}
@@ -333,6 +346,9 @@ const ProjectWorkspaceContent = () => {
               historyLoading={historyLoading}
               onRestoreHistory={handleRestoreHistory}
               onDeleteHistory={handleDeleteHistory}
+              showAuthPrompt={showAuthPrompt && !user}
+              onDismissAuthPrompt={() => setShowAuthPrompt(false)}
+              onOpenAuthModal={() => setAuthModalOpen(true)}
             />
           </TabsContent>
         </div>
@@ -343,6 +359,9 @@ const ProjectWorkspaceContent = () => {
       
       {/* Onboarding Modal for new users */}
       <OnboardingModal />
+      
+      {/* Auth Modal for anonymous users */}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </main>
   );
 };

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen, ShieldAlert, Shield, ShieldCheck } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen, ShieldAlert, Shield, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ type ClaimStatus = 'supported' | 'partial' | 'unsupported' | 'contradicted';
 
 interface ReportTabProps {
   hasVerified: boolean;
+  isLoading?: boolean;
   claims: Claim[];
   interventions: Intervention[];
   summary: VerificationSummary | null;
@@ -35,6 +36,9 @@ interface ReportTabProps {
   historyLoading: boolean;
   onRestoreHistory: (entry: VerificationHistoryEntry) => void;
   onDeleteHistory: (id: string) => void;
+  showAuthPrompt?: boolean;
+  onDismissAuthPrompt?: () => void;
+  onOpenAuthModal?: () => void;
 }
 
 const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass: string; labelEn: string; labelFr: string }> = {
@@ -61,6 +65,7 @@ const getSeverityConfig = (severity: string) => {
 
 export const ReportTab = ({
   hasVerified,
+  isLoading,
   claims,
   interventions,
   summary,
@@ -70,6 +75,9 @@ export const ReportTab = ({
   historyLoading,
   onRestoreHistory,
   onDeleteHistory,
+  showAuthPrompt,
+  onDismissAuthPrompt,
+  onOpenAuthModal,
 }: ReportTabProps) => {
   const { t, language } = useLanguage();
   const { askAboutClaim, findArticlesForClaim } = useChat();
@@ -188,6 +196,18 @@ export const ReportTab = ({
     </Card>
   );
 
+  // Loading state during tab transition
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-sm text-muted-foreground">
+          {language === 'fr' ? 'Préparation du rapport...' : 'Preparing report...'}
+        </p>
+      </div>
+    );
+  }
+
   if (!hasVerified) {
     return (
       <div className="space-y-6">
@@ -239,6 +259,47 @@ export const ReportTab = ({
 
   return (
     <div className="space-y-6">
+      {/* Auth Prompt for Anonymous Users */}
+      {showAuthPrompt && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="pt-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <History className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {language === 'fr' 
+                      ? 'Enregistrez vos résultats' 
+                      : 'Save your results'}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {language === 'fr'
+                      ? 'Connectez-vous pour sauvegarder votre historique de vérification et y accéder depuis n\'importe quel appareil.'
+                      : 'Sign in to save your verification history and access it from any device.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onDismissAuthPrompt}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={onOpenAuthModal}
+                >
+                  {language === 'fr' ? 'Se connecter' : 'Sign in'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Overall Feedback */}
       {summary?.overallFeedback && (
         <Card className="bg-muted/50">
