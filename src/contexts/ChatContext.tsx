@@ -121,6 +121,30 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const sendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
+    // Auto-detect article-related requests and route to find-sources
+    const articleKeywordsEN = [
+      'find article', 'find articles', 'search article', 'search articles',
+      'find source', 'find sources', 'academic source', 'academic sources',
+      'find paper', 'find papers', 'research paper', 'look for article',
+      'search for article', 'find study', 'find studies', 'find evidence'
+    ];
+    const articleKeywordsFR = [
+      'trouve article', 'trouver article', 'cherche article', 'chercher article',
+      'trouve source', 'trouver source', 'source académique', 'sources académiques',
+      'article académique', 'articles académiques', 'cherche étude', 'trouve étude',
+      'trouver des articles', 'chercher des articles', 'trouve preuve', 'trouver preuve'
+    ];
+    
+    const allKeywords = [...articleKeywordsEN, ...articleKeywordsFR];
+    const lowerContent = content.toLowerCase();
+    
+    const isArticleRequest = allKeywords.some(keyword => lowerContent.includes(keyword));
+    
+    // Upgrade to find-sources if it's an article request but was sent as chat
+    if (isArticleRequest && action === 'chat') {
+      action = 'find-sources';
+    }
+    
     // Handle context-aware search markers
     let displayContent = content;
     let searchQuery = content;
