@@ -135,6 +135,8 @@ export type Database = {
           created_at: string | null
           draft_text: string | null
           evaluation_grid: Json | null
+          final_draft: string | null
+          final_draft_versions: Json | null
           has_verified: boolean | null
           id: string
           instructions: string | null
@@ -156,6 +158,8 @@ export type Database = {
           created_at?: string | null
           draft_text?: string | null
           evaluation_grid?: Json | null
+          final_draft?: string | null
+          final_draft_versions?: Json | null
           has_verified?: boolean | null
           id?: string
           instructions?: string | null
@@ -177,6 +181,8 @@ export type Database = {
           created_at?: string | null
           draft_text?: string | null
           evaluation_grid?: Json | null
+          final_draft?: string | null
+          final_draft_versions?: Json | null
           has_verified?: boolean | null
           id?: string
           instructions?: string | null

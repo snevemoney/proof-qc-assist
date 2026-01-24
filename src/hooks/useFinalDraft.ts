@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Source, Claim, Intervention } from '@/lib/verification';
@@ -19,13 +19,26 @@ export interface DraftVersion {
   timestamp: Date;
 }
 
-export const useFinalDraft = () => {
+export interface UseFinalDraftOptions {
+  finalDraft: string;
+  setFinalDraft: (text: string) => void;
+  versions: DraftVersion[];
+  setVersions: (versions: DraftVersion[]) => void;
+}
+
+export const useFinalDraft = (options: UseFinalDraftOptions) => {
   const { user } = useAuth();
-  const [finalDraft, setFinalDraft] = useState<string>('');
+  const { finalDraft, setFinalDraft, versions, setVersions } = options;
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [versions, setVersions] = useState<DraftVersion[]>([]);
-  const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
+  
+  // Calculate current version index from versions array
+  const currentVersionIndex = useMemo(() => {
+    if (versions.length === 0) return -1;
+    // Find the index of the version matching current finalDraft
+    const idx = versions.findIndex(v => v.text === finalDraft);
+    return idx >= 0 ? idx : versions.length - 1;
+  }, [versions, finalDraft]);
 
   const generateFinalDraft = useCallback(async (params: GenerateFinalDraftParams): Promise<boolean> => {
     if (!user) {
@@ -166,12 +179,12 @@ export const useFinalDraft = () => {
       }
 
       // Save to version history
-      setVersions(prev => [...prev, { 
+      const newVersion: DraftVersion = { 
         text: fullText, 
         feedback: params.feedback,
         timestamp: new Date() 
-      }]);
-      setCurrentVersionIndex(prev => prev + 1);
+      };
+      setVersions([...versions, newVersion]);
 
       return true;
     } catch (err) {
@@ -200,28 +213,25 @@ export const useFinalDraft = () => {
     if (currentVersionIndex > 0 && versions.length > 0) {
       const prevIndex = currentVersionIndex - 1;
       if (versions[prevIndex]?.text) {
-        setCurrentVersionIndex(prevIndex);
         setFinalDraft(versions[prevIndex].text);
       }
     }
-  }, [currentVersionIndex, versions]);
+  }, [currentVersionIndex, versions, setFinalDraft]);
 
   const goToNextVersion = useCallback(() => {
     if (currentVersionIndex < versions.length - 1 && versions.length > 0) {
       const nextIndex = currentVersionIndex + 1;
       if (versions[nextIndex]?.text) {
-        setCurrentVersionIndex(nextIndex);
         setFinalDraft(versions[nextIndex].text);
       }
     }
-  }, [currentVersionIndex, versions]);
+  }, [currentVersionIndex, versions, setFinalDraft]);
 
   const clearFinalDraft = useCallback(() => {
     setFinalDraft('');
     setError(null);
     setVersions([]);
-    setCurrentVersionIndex(-1);
-  }, []);
+  }, [setFinalDraft, setVersions]);
 
   return {
     finalDraft,

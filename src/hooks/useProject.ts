@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Source, Claim, Intervention, VerificationSummary, RequirementCheck, RubricScore } from '@/lib/verification';
 import type { Json } from '@/integrations/supabase/types';
 import { EvaluationCriterion } from '@/lib/evaluationTemplates';
+import { DraftVersion } from '@/hooks/useFinalDraft';
 
 export interface ChatMessage {
   id: string;
@@ -28,6 +29,8 @@ export interface ProjectState {
   instructions: string;
   evaluationGrid: EvaluationCriterion[];
   verificationLanguage: 'fr' | 'en' | null;
+  finalDraft: string;
+  finalDraftVersions: DraftVersion[];
 }
 
 const DEMO_SOURCES: Source[] = [
@@ -66,6 +69,8 @@ const DEFAULT_STATE: ProjectState = {
   instructions: '',
   evaluationGrid: [],
   verificationLanguage: null,
+  finalDraft: '',
+  finalDraftVersions: [],
 };
 
 const STORAGE_KEY = 'proofcheck-project';
@@ -136,6 +141,11 @@ export const useProject = (projectId: string | null = null) => {
             instructions: (data as any).instructions || '',
             evaluationGrid: ((data as any).evaluation_grid as unknown as EvaluationCriterion[]) || [],
             verificationLanguage: ((data as any).verification_language as 'fr' | 'en') || null,
+            finalDraft: (data as any).final_draft || '',
+            finalDraftVersions: (((data as any).final_draft_versions as unknown as DraftVersion[]) || []).map((v) => ({
+              ...v,
+              timestamp: new Date(v.timestamp),
+            })),
           });
         } else {
           // New project - start with default state (empty for new projects)
@@ -212,6 +222,11 @@ export const useProject = (projectId: string | null = null) => {
             instructions: newState.instructions,
             evaluation_grid: newState.evaluationGrid as unknown as Json,
             verification_language: newState.verificationLanguage,
+            final_draft: newState.finalDraft,
+            final_draft_versions: newState.finalDraftVersions.map((v) => ({
+              ...v,
+              timestamp: v.timestamp.toISOString(),
+            })) as unknown as Json,
             updated_at: new Date().toISOString(),
           };
 
@@ -484,6 +499,28 @@ export const useProject = (projectId: string | null = null) => {
     [saveNow, state]
   );
 
+  const setFinalDraft = useCallback(
+    (finalDraft: string) => {
+      setState((prev) => {
+        const newState = { ...prev, finalDraft };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
+  const setFinalDraftVersions = useCallback(
+    (finalDraftVersions: DraftVersion[]) => {
+      setState((prev) => {
+        const newState = { ...prev, finalDraftVersions };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
   return {
     ...state,
     isLoading: isLoading || authLoading,
@@ -502,6 +539,8 @@ export const useProject = (projectId: string | null = null) => {
     setInstructions,
     setEvaluationGrid,
     setVerificationLanguage,
+    setFinalDraft,
+    setFinalDraftVersions,
     updateState,
     updateStateImmediate,
   };
