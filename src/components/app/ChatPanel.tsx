@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, MessageCircle, Sparkles, Trash2, Stethoscope, ChevronDown, Plus, Check, Pencil, X, Key } from 'lucide-react';
+import { Send, MessageCircle, Sparkles, Trash2, Stethoscope, ChevronDown, Plus, Check, Pencil, X, Key, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -428,6 +428,12 @@ export const ChatPanel = () => {
               )}>
                 {projectContext.claims.length} {language === 'fr' ? 'affirmations' : 'claims'}
               </span>
+              {(projectContext.instructions || projectContext.evaluationGrid.length > 0) && (
+                <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-chart-2/10 text-chart-2 flex items-center gap-1">
+                  <ClipboardCheck className="h-2.5 w-2.5" />
+                  {language === 'fr' ? 'Exigences' : 'Requirements'} ✓
+                </span>
+              )}
             </div>
           </SheetHeader>
 
@@ -465,7 +471,13 @@ export const ChatPanel = () => {
           <NursingDatabaseLinks />
 
           {/* Quick Actions - Always visible */}
-          <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={loading} />
+          <QuickActions 
+            onAction={handleQuickAction} 
+            hasVerificationResults={hasVerificationResults} 
+            hasInstructions={!!projectContext.instructions}
+            hasEvaluationGrid={projectContext.evaluationGrid.length > 0}
+            disabled={loading} 
+          />
 
           <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t border-border flex-shrink-0">
             <div className="flex gap-1.5 sm:gap-2 mb-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible sm:pb-0">

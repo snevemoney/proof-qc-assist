@@ -84,10 +84,20 @@ const ProjectWorkspaceContent = () => {
     }
   }, [user, historyLoading, hasVerified, history.length, claims.length, setHasVerified]);
 
-  // Sync project context with chat
+  // Sync project context with chat (including requirements)
   useEffect(() => {
-    setProjectContext({ sources, draftText, claims, interventions, summary });
-  }, [sources, draftText, claims, interventions, summary, setProjectContext]);
+    setProjectContext({ 
+      sources, 
+      draftText, 
+      claims, 
+      interventions, 
+      summary,
+      instructions,
+      evaluationGrid,
+      requirementChecks,
+      rubricScores,
+    });
+  }, [sources, draftText, claims, interventions, summary, instructions, evaluationGrid, requirementChecks, rubricScores, setProjectContext]);
 
   // Load chat messages from project
   useEffect(() => {

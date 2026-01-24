@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
-import type { Source, Claim, Intervention, VerificationSummary } from '@/lib/verification';
+import type { Source, Claim, Intervention, VerificationSummary, RequirementCheck, RubricScore } from '@/lib/verification';
 import type { ArticleResult } from '@/components/app/ArticleSuggestionCard';
+import type { EvaluationCriterion } from '@/lib/evaluationTemplates';
 
 export interface ChatMessage {
   id: string;
@@ -9,6 +10,18 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   isStreaming?: boolean;
+}
+
+interface ProjectContextData {
+  sources: Source[];
+  draftText: string;
+  claims: Claim[];
+  interventions: Intervention[];
+  summary: VerificationSummary | null;
+  instructions: string;
+  evaluationGrid: EvaluationCriterion[];
+  requirementChecks: RequirementCheck[];
+  rubricScores: RubricScore[];
 }
 
 interface ChatContextType {
@@ -22,20 +35,8 @@ interface ChatContextType {
   clearMessages: () => void;
   addedArticleIds: Set<string>;
   addSourceFromSearch: (article: ArticleResult) => void;
-  projectContext: {
-    sources: Source[];
-    draftText: string;
-    claims: Claim[];
-    interventions: Intervention[];
-    summary: VerificationSummary | null;
-  };
-  setProjectContext: (context: {
-    sources: Source[];
-    draftText: string;
-    claims: Claim[];
-    interventions: Intervention[];
-    summary: VerificationSummary | null;
-  }) => void;
+  projectContext: ProjectContextData;
+  setProjectContext: (context: ProjectContextData) => void;
   onAddSources?: (sources: Source[]) => void;
   setOnAddSources: (callback: ((sources: Source[]) => void) | undefined) => void;
   // New: external message sync
@@ -59,18 +60,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [onAddSourcesCallback, setOnAddSourcesCallback] = useState<((sources: Source[]) => void) | undefined>();
   const [onMessagesChangeCallback, setOnMessagesChangeCallback] = useState<((messages: ChatMessage[]) => void) | undefined>();
   const [externalMessages, setExternalMessages] = useState<ChatMessage[]>([]);
-  const [projectContext, setProjectContext] = useState<{
-    sources: Source[];
-    draftText: string;
-    claims: Claim[];
-    interventions: Intervention[];
-    summary: VerificationSummary | null;
-  }>({
+  const [projectContext, setProjectContext] = useState<ProjectContextData>({
     sources: [],
     draftText: '',
     claims: [],
     interventions: [],
     summary: null,
+    instructions: '',
+    evaluationGrid: [],
+    requirementChecks: [],
+    rubricScores: [],
   });
 
   // Sync external messages on mount

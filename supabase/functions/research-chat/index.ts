@@ -22,6 +22,32 @@ interface Claim {
   suggestion?: string;
 }
 
+interface EvaluationCriterion {
+  id: string;
+  name: string;
+  nameFr: string;
+  description: string;
+  descriptionFr: string;
+  weight: number;
+  isRequired: boolean;
+}
+
+interface RequirementCheck {
+  instruction: string;
+  status: 'met' | 'partial' | 'not_met' | 'unable_to_verify';
+  explanation: string;
+  suggestion?: string;
+}
+
+interface RubricScore {
+  criterionId: string;
+  criterionName: string;
+  estimatedScore: number;
+  maxScore: number;
+  justification: string;
+  improvements: string[];
+}
+
 interface ChatContext {
   sources: Source[];
   draftText: string;
@@ -33,6 +59,10 @@ interface ChatContext {
     contradicted: number;
     overallFeedback?: string;
   } | null;
+  instructions?: string;
+  evaluationGrid?: EvaluationCriterion[];
+  requirementChecks?: RequirementCheck[];
+  rubricScores?: RubricScore[];
 }
 
 interface ChatRequest {
@@ -40,7 +70,7 @@ interface ChatRequest {
   context: ChatContext;
   language: 'fr' | 'en';
   action: 'chat' | 'research';
-  claimId?: string; // If asking about a specific claim
+  claimId?: string;
 }
 
 const systemPromptEN = `You are ProofCheck AI, an intelligent research assistant for university students. You help students verify their academic claims, improve their writing, and find additional evidence.
@@ -50,6 +80,20 @@ const systemPromptEN = `You are ProofCheck AI, an intelligent research assistant
 2. **Academic Guidance**: You explain why claims are marked a certain way and provide specific suggestions for improvement.
 3. **Citation Help**: You can help format citations in APA, MLA, or other styles.
 4. **Writing Improvement**: You suggest ways to strengthen weak arguments and improve academic tone.
+
+## Assignment Requirements Awareness:
+You have full access to:
+1. **Assignment Instructions**: Specific requirements the student must meet for their assignment
+2. **Evaluation Grid**: The criteria and weights that will be used for grading
+3. **Requirements Compliance**: Which instructions are met, partial, or not met
+4. **Rubric Scores**: Estimated scores for each evaluation criterion
+
+Use this information to:
+- Explain why certain requirements are not fully met
+- Suggest specific improvements to boost rubric scores
+- Prioritize recommendations based on criterion weights (higher weight = more important)
+- Help students understand what evaluators are looking for
+- When a criterion has a low score, explain exactly what's missing
 
 ## Your Personality:
 - Supportive and encouraging, like a helpful teaching assistant
@@ -64,7 +108,8 @@ Sources are labeled [S1], [S2], etc. Claims are marked with their verification s
 - Never fabricate citations or evidence
 - Always reference the student's actual sources when discussing their work
 - If you don't know something, say so honestly
-- Encourage academic integrity`;
+- Encourage academic integrity
+- When discussing requirements, be specific about what's missing and how to fix it`;
 
 const systemPromptFR = `Vous êtes ProofCheck AI, un assistant de recherche intelligent pour les étudiants universitaires. Vous aidez les étudiants à vérifier leurs affirmations académiques, améliorer leur rédaction et trouver des preuves supplémentaires.
 
@@ -73,6 +118,20 @@ const systemPromptFR = `Vous êtes ProofCheck AI, un assistant de recherche inte
 2. **Conseils Académiques**: Vous expliquez pourquoi les affirmations sont marquées d'une certaine manière et fournissez des suggestions spécifiques d'amélioration.
 3. **Aide aux Citations**: Vous pouvez aider à formater les citations en APA, MLA ou autres styles.
 4. **Amélioration de l'Écriture**: Vous suggérez des moyens de renforcer les arguments faibles et d'améliorer le ton académique.
+
+## Connaissance des Exigences du Travail:
+Vous avez accès complet à:
+1. **Consignes du travail**: Exigences spécifiques que l'étudiant doit respecter
+2. **Grille d'évaluation**: Les critères et pondérations utilisés pour la notation
+3. **Conformité aux exigences**: Quelles consignes sont respectées, partielles ou non respectées
+4. **Scores de la grille**: Scores estimés pour chaque critère d'évaluation
+
+Utilisez ces informations pour:
+- Expliquer pourquoi certaines exigences ne sont pas entièrement respectées
+- Suggérer des améliorations spécifiques pour augmenter les scores
+- Prioriser les recommandations selon le poids des critères (plus le poids est élevé, plus c'est important)
+- Aider les étudiants à comprendre ce que les évaluateurs recherchent
+- Quand un critère a un score faible, expliquer exactement ce qui manque
 
 ## Votre Personnalité:
 - Encourageant et solidaire, comme un assistant d'enseignement serviable
@@ -87,10 +146,11 @@ Les sources sont étiquetées [S1], [S2], etc. Les affirmations sont marquées a
 - Ne jamais inventer de citations ou de preuves
 - Toujours faire référence aux sources réelles de l'étudiant lors de la discussion de son travail
 - Si vous ne savez pas quelque chose, dites-le honnêtement
-- Encouragez l'intégrité académique`;
+- Encouragez l'intégrité académique
+- Lorsque vous discutez des exigences, soyez précis sur ce qui manque et comment le corriger`;
 
 function buildContextString(context: ChatContext, language: 'fr' | 'en'): string {
-  const { sources, draftText, claims, summary } = context;
+  const { sources, draftText, claims, summary, instructions, evaluationGrid, requirementChecks, rubricScores } = context;
   
   let contextStr = language === 'fr' ? '## Sources de l\'étudiant:\n' : '## Student\'s Sources:\n';
   
@@ -102,6 +162,65 @@ function buildContextString(context: ChatContext, language: 'fr' | 'en'): string
   contextStr += language === 'fr' ? '\n## Brouillon de l\'étudiant:\n' : '\n## Student\'s Draft:\n';
   contextStr += draftText.substring(0, 1000) + (draftText.length > 1000 ? '...' : '') + '\n';
   
+  // Add assignment instructions
+  if (instructions && instructions.trim()) {
+    contextStr += language === 'fr' 
+      ? '\n## Consignes du travail:\n' 
+      : '\n## Assignment Instructions:\n';
+    contextStr += instructions + '\n';
+  }
+  
+  // Add evaluation grid
+  if (evaluationGrid && evaluationGrid.length > 0) {
+    contextStr += language === 'fr' 
+      ? '\n## Grille d\'évaluation:\n' 
+      : '\n## Evaluation Grid:\n';
+    evaluationGrid.forEach((criterion, i) => {
+      const name = language === 'fr' ? (criterion.nameFr || criterion.name) : criterion.name;
+      const desc = language === 'fr' ? (criterion.descriptionFr || criterion.description) : criterion.description;
+      contextStr += `\n${i + 1}. ${name} (${criterion.weight}%)${criterion.isRequired ? ' [REQUIRED]' : ''}\n`;
+      if (desc) contextStr += `   ${desc}\n`;
+    });
+  }
+  
+  // Add requirements compliance status
+  if (requirementChecks && requirementChecks.length > 0) {
+    contextStr += language === 'fr' 
+      ? '\n## Conformité aux exigences:\n' 
+      : '\n## Requirements Compliance:\n';
+    const statusLabels: Record<string, string> = {
+      met: '✅',
+      partial: '⚠️',
+      not_met: '❌',
+      unable_to_verify: '❓'
+    };
+    requirementChecks.forEach(check => {
+      contextStr += `${statusLabels[check.status] || '•'} ${check.instruction}\n`;
+      contextStr += `   ${check.explanation}\n`;
+      if (check.suggestion) {
+        contextStr += `   💡 ${check.suggestion}\n`;
+      }
+    });
+  }
+  
+  // Add rubric scores
+  if (rubricScores && rubricScores.length > 0) {
+    contextStr += language === 'fr' 
+      ? '\n## Scores de la grille d\'évaluation:\n' 
+      : '\n## Evaluation Grid Scores:\n';
+    rubricScores.forEach(score => {
+      contextStr += `• ${score.criterionName}: ${score.estimatedScore}/${score.maxScore}\n`;
+      contextStr += `   ${score.justification}\n`;
+      if (score.improvements && score.improvements.length > 0) {
+        contextStr += language === 'fr' ? '   Améliorations suggérées:\n' : '   Suggested improvements:\n';
+        score.improvements.forEach(imp => {
+          contextStr += `   - ${imp}\n`;
+        });
+      }
+    });
+  }
+  
+  // Add verification results
   if (claims.length > 0) {
     contextStr += language === 'fr' ? '\n## Résultats de Vérification:\n' : '\n## Verification Results:\n';
     
