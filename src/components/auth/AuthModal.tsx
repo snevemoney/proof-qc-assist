@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { migrateAnonymousData, hasAnonymousData } from '@/lib/migrateAnonymousData';
 
 interface AuthModalProps {
   open: boolean;
@@ -31,6 +32,8 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
     signUpBtn: language === 'fr' ? "S'inscrire" : 'Create Account',
     signInSuccess: language === 'fr' ? 'Connexion réussie' : 'Signed in successfully',
     signUpSuccess: language === 'fr' ? 'Compte créé avec succès' : 'Account created successfully',
+    dataMigrated: language === 'fr' ? 'Vos données ont été sauvegardées dans votre compte!' : 'Your work has been saved to your account!',
+    migratingData: language === 'fr' ? 'Sauvegarde de vos données...' : 'Saving your work...',
     error: language === 'fr' ? 'Erreur' : 'Error',
   };
 
@@ -60,7 +63,7 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
     e.preventDefault();
     setIsLoading(true);
     
-    const { error } = await signUp(email, password);
+    const { error, user } = await signUp(email, password);
     
     if (error) {
       toast({
@@ -68,13 +71,26 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
         description: error.message,
         variant: 'destructive',
       });
-    } else {
-      toast({ title: t.signUpSuccess });
-      onOpenChange(false);
-      setEmail('');
-      setPassword('');
+      setIsLoading(false);
+      return;
     }
     
+    // Migrate anonymous data if user was created and has local data
+    if (user && hasAnonymousData()) {
+      toast({ title: t.migratingData });
+      const migrated = await migrateAnonymousData(user.id);
+      if (migrated) {
+        toast({ title: t.dataMigrated });
+        // Force page reload to refresh all data from the database
+        window.location.reload();
+        return;
+      }
+    }
+    
+    toast({ title: t.signUpSuccess });
+    onOpenChange(false);
+    setEmail('');
+    setPassword('');
     setIsLoading(false);
   };
 
