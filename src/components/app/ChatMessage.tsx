@@ -186,16 +186,16 @@ export const ChatMessage = ({
         isUser ? "bg-muted/50" : "bg-background"
       )}>
         <div className={cn(
-          "flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center",
+          "flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
           isUser ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
         )}>
-          {isUser ? <User className="h-4 w-4 sm:h-5 sm:w-5" /> : <Bot className="h-4 w-4 sm:h-5 sm:w-5" />}
+          {isUser ? <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
         </div>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <span className="text-sm sm:text-base font-medium">
+              <span className="text-xs sm:text-sm font-medium">
                 {isUser ? translations.you : 'ProofCheck AI'}
               </span>
               
@@ -245,7 +245,7 @@ export const ChatMessage = ({
                 <TooltipTrigger asChild>
                   <button 
                     type="button"
-                    className="text-xs sm:text-sm text-muted-foreground cursor-default hover:text-muted-foreground/80"
+                    className="text-[10px] sm:text-xs text-muted-foreground cursor-default hover:text-muted-foreground/80"
                   >
                     {formatRelativeTime(messageDate, language)}
                   </button>
@@ -283,7 +283,7 @@ export const ChatMessage = ({
               <Textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="min-h-[100px] text-sm sm:text-base"
+                className="min-h-[100px] text-sm"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') handleCancelEdit();
@@ -312,7 +312,7 @@ export const ChatMessage = ({
             </div>
           ) : (
             <div className={cn(
-              "text-sm sm:text-base text-foreground whitespace-pre-wrap break-words prose prose-sm sm:prose-base max-w-none",
+              "text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none",
               isViewingOldVersion && "opacity-70"
             )}>
               {isUser ? displayContent : textContent}
