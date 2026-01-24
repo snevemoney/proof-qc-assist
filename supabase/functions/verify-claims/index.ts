@@ -64,7 +64,12 @@ STRICT MODE: When strict mode is enabled, require explicit citations and direct 
 
 Respond using the suggest_claims tool with your analysis.`;
 
-const systemPromptFR = `Vous êtes un assistant de vérification académique pour les étudiants en sciences infirmières des universités du Québec. Votre tâche est de vérifier les affirmations ET les interventions infirmières dans le brouillon d'un étudiant par rapport à ses sources téléchargées.
+const systemPromptFR = `IMPORTANT - LANGUE OBLIGATOIRE: Toutes vos réponses DOIVENT être rédigées EXCLUSIVEMENT en français (Québec). N'écrivez JAMAIS en anglais. Les seules exceptions sont:
+- Les citations directes entre guillemets provenant de sources en anglais
+- Les codes de statut internes (supported, partial, unsupported, contradicted, critical, standard, optional)
+- Les références de sources [S1], [S2], etc.
+
+Vous êtes un assistant de vérification académique pour les étudiants en sciences infirmières des universités du Québec. Votre tâche est de vérifier les affirmations ET les interventions infirmières dans le brouillon d'un étudiant par rapport à ses sources téléchargées.
 
 RÈGLES CRITIQUES:
 1. Vérifiez UNIQUEMENT les affirmations par rapport aux documents sources fournis - N'utilisez JAMAIS de connaissances externes
@@ -106,7 +111,7 @@ Pour chaque intervention, évaluez:
 
 MODE STRICT: Lorsque le mode strict est activé, exigez des citations explicites et des citations directes. Sans mode strict, autorisez une paraphrase raisonnable.
 
-Répondez en utilisant l'outil suggest_claims avec votre analyse.`;
+RAPPEL FINAL: Rédigez TOUTES vos analyses, suggestions, preuves et rétroactions EN FRANÇAIS. Utilisez l'outil suggest_claims avec votre analyse.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -178,38 +183,47 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
               type: "function",
               function: {
                 name: "suggest_claims",
-                description: "Return the verification results for all claims and interventions found in the draft",
+                description: language === 'fr'
+                  ? "Retournez les résultats de vérification pour toutes les affirmations et interventions trouvées dans le brouillon. IMPORTANT: Rédigez TOUTES les valeurs textuelles en FRANÇAIS."
+                  : "Return the verification results for all claims and interventions found in the draft",
                 parameters: {
                   type: "object",
                   properties: {
                     claims: {
                       type: "array",
+                      description: language === 'fr' ? "Liste des affirmations identifiées dans le brouillon" : "List of claims identified in the draft",
                       items: {
                         type: "object",
                         properties: {
                           text: { 
                             type: "string",
-                            description: "The exact claim text from the student's draft"
+                            description: language === 'fr'
+                              ? "Le texte exact de l'affirmation tirée du brouillon de l'étudiant"
+                              : "The exact claim text from the student's draft"
                           },
                           status: { 
                             type: "string", 
                             enum: ["supported", "partial", "unsupported", "contradicted"],
-                            description: "The verification status of this claim"
+                            description: language === 'fr'
+                              ? "Le statut de vérification de cette affirmation (codes internes, ne pas traduire)"
+                              : "The verification status of this claim"
                           },
                           sourceRef: { 
                             type: "string",
-                            description: "Source reference like [S1] or [S1, S2] if applicable"
+                            description: language === 'fr'
+                              ? "Référence de source comme [S1] ou [S1, S2] si applicable"
+                              : "Source reference like [S1] or [S1, S2] if applicable"
                           },
                           evidence: { 
                             type: "string",
                             description: language === 'fr'
-                              ? "Citation directe ou paraphrase de la source soutenant ou contredisant l'affirmation. Rédigez en FRANÇAIS."
+                              ? "Citation directe ou paraphrase de la source soutenant ou contredisant l'affirmation. OBLIGATOIRE: Rédigez en FRANÇAIS uniquement."
                               : "Direct quote or paraphrase from the source supporting or contradicting the claim. Write in ENGLISH."
                           },
                           suggestion: { 
                             type: "string",
                             description: language === 'fr'
-                              ? "Suggestion utile pour l'étudiant sur comment améliorer cette affirmation. Rédigez en FRANÇAIS."
+                              ? "Suggestion utile pour l'étudiant sur comment améliorer cette affirmation. OBLIGATOIRE: Rédigez en FRANÇAIS uniquement."
                               : "Helpful suggestion for the student on how to improve this claim. Write in ENGLISH."
                           }
                         },
@@ -219,40 +233,51 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                     },
                     interventions: {
                       type: "array",
+                      description: language === 'fr' ? "Liste des interventions infirmières identifiées" : "List of nursing interventions identified",
                       items: {
                         type: "object",
                         properties: {
                           text: {
                             type: "string",
-                            description: "The nursing intervention text from the student's draft"
+                            description: language === 'fr'
+                              ? "Le texte de l'intervention infirmière tirée du brouillon de l'étudiant"
+                              : "The nursing intervention text from the student's draft"
                           },
                           severity: {
                             type: "string",
                             enum: ["critical", "standard", "optional"],
-                            description: "Priority level: critical (life/safety), standard (core care), optional (comfort/preference)"
+                            description: language === 'fr'
+                              ? "Niveau de priorité: critical (vie/sécurité), standard (soins de base), optional (confort/préférence) - codes internes"
+                              : "Priority level: critical (life/safety), standard (core care), optional (comfort/preference)"
                           },
                           hasEvidence: {
                             type: "boolean",
-                            description: "Whether this intervention is supported by research evidence in the sources"
+                            description: language === 'fr'
+                              ? "Cette intervention est-elle soutenue par des preuves de recherche dans les sources?"
+                              : "Whether this intervention is supported by research evidence in the sources"
                           },
                           hasRationale: {
                             type: "boolean",
-                            description: "Whether the student explains WHY this intervention is clinically appropriate"
+                            description: language === 'fr'
+                              ? "L'étudiant explique-t-il POURQUOI cette intervention est cliniquement appropriée?"
+                              : "Whether the student explains WHY this intervention is clinically appropriate"
                           },
                           sourceRef: {
                             type: "string",
-                            description: "Source reference like [S1] if evidence is found"
+                            description: language === 'fr'
+                              ? "Référence de source comme [S1] si des preuves sont trouvées"
+                              : "Source reference like [S1] if evidence is found"
                           },
                           rationaleText: {
                             type: "string",
                             description: language === 'fr'
-                              ? "Le texte de justification extrait si présent. Rédigez en FRANÇAIS."
+                              ? "Le texte de justification extrait si présent. OBLIGATOIRE: Rédigez en FRANÇAIS uniquement."
                               : "The extracted rationale text if present. Write in ENGLISH."
                           },
                           suggestion: {
                             type: "string",
                             description: language === 'fr'
-                              ? "Suggestion utile pour l'étudiant si la preuve ou la justification manque. Rédigez en FRANÇAIS."
+                              ? "Suggestion utile pour l'étudiant si la preuve ou la justification manque. OBLIGATOIRE: Rédigez en FRANÇAIS uniquement."
                               : "Helpful suggestion for the student if evidence or rationale is missing. Write in ENGLISH."
                           }
                         },
@@ -262,21 +287,22 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                     },
                     summary: {
                       type: "object",
+                      description: language === 'fr' ? "Résumé de la vérification" : "Verification summary",
                       properties: {
-                        totalClaims: { type: "number" },
-                        supported: { type: "number" },
-                        partial: { type: "number" },
-                        unsupported: { type: "number" },
-                        contradicted: { type: "number" },
+                        totalClaims: { type: "number", description: language === 'fr' ? "Nombre total d'affirmations" : "Total number of claims" },
+                        supported: { type: "number", description: language === 'fr' ? "Nombre d'affirmations soutenues" : "Number of supported claims" },
+                        partial: { type: "number", description: language === 'fr' ? "Nombre d'affirmations partiellement soutenues" : "Number of partially supported claims" },
+                        unsupported: { type: "number", description: language === 'fr' ? "Nombre d'affirmations non soutenues" : "Number of unsupported claims" },
+                        contradicted: { type: "number", description: language === 'fr' ? "Nombre d'affirmations contredites" : "Number of contradicted claims" },
                         overallFeedback: { 
                           type: "string",
                           description: language === 'fr'
-                            ? "Rétroaction globale pour l'étudiant. Résumez les forces et faiblesses du brouillon. Rédigez en FRANÇAIS."
+                            ? "Rétroaction globale pour l'étudiant. Résumez les forces et faiblesses du brouillon. OBLIGATOIRE: Rédigez en FRANÇAIS uniquement."
                             : "Overall feedback for the student. Summarize the strengths and weaknesses of the draft. Write in ENGLISH."
                         },
-                        totalInterventions: { type: "number" },
-                        interventionsWithEvidence: { type: "number" },
-                        interventionsWithRationale: { type: "number" }
+                        totalInterventions: { type: "number", description: language === 'fr' ? "Nombre total d'interventions" : "Total number of interventions" },
+                        interventionsWithEvidence: { type: "number", description: language === 'fr' ? "Nombre d'interventions avec preuves" : "Number of interventions with evidence" },
+                        interventionsWithRationale: { type: "number", description: language === 'fr' ? "Nombre d'interventions avec justification" : "Number of interventions with rationale" }
                       },
                       required: ["totalClaims", "supported", "partial", "unsupported", "contradicted", "totalInterventions", "interventionsWithEvidence", "interventionsWithRationale"],
                       additionalProperties: false
