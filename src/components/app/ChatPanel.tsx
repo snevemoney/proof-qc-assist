@@ -240,8 +240,8 @@ export const ChatPanel = () => {
         </Button>
       )}
 
-      {isPanelOpen && (
-        <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
+      {/* Always mounted to avoid Radix portal race conditions */}
+      <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
         <SheetContent side="right" className="w-full sm:w-[450px] sm:max-w-[450px] p-0 flex flex-col h-full overflow-hidden">
           <SheetHeader className="p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -471,7 +471,6 @@ export const ChatPanel = () => {
           </form>
         </SheetContent>
         </Sheet>
-      )}
     </>
   );
 };
