@@ -10,6 +10,7 @@ import { ReadinessIndicator } from './ReadinessIndicator';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
+import { useProjectContext } from '@/contexts/ProjectContext';
 import { verifyClaims, type Source } from '@/lib/verification';
 import { useToast } from '@/hooks/use-toast';
 import { useProject } from '@/hooks/useProject';
@@ -166,7 +167,7 @@ const ProjectWorkspaceContent = () => {
   }
 
   return (
-    <div className="flex-1 p-6 relative">
+    <main className="flex-1 p-6 relative overflow-auto">
       {isSaving && (
         <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" />
@@ -246,7 +247,7 @@ const ProjectWorkspaceContent = () => {
       
       {/* Onboarding Modal for new users */}
       <OnboardingModal />
-    </div>
+    </main>
   );
 };
 

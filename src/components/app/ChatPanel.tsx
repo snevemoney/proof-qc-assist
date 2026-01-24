@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, MessageCircle, Sparkles, Trash2, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useChat } from '@/contexts/ChatContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useProjectContext } from '@/contexts/ProjectContext';
+import { useChatMessages } from '@/hooks/useChatMessages';
 import { ChatMessage } from './ChatMessage';
 import { QuickActions } from './QuickActions';
 import { PICOSearchForm } from './PICOSearchForm';
@@ -14,23 +16,47 @@ import { cn } from '@/lib/utils';
 
 export const ChatPanel = () => {
   const { language } = useLanguage();
+  const { currentSessionId, renameSession } = useProjectContext();
   const { 
-    messages, 
-    isLoading, 
-    isPanelOpen, 
-    setIsPanelOpen, 
-    sendMessage,
-    clearMessages,
+    messages: contextMessages,
+    isLoading: contextLoading,
+    sendMessage: sendContextMessage,
     projectContext,
     addedArticleIds,
     addSourceFromSearch,
+    isPanelOpen,
+    setIsPanelOpen,
   } = useChat();
+  
+  // Use persistent chat messages from the hook
+  const {
+    messages: persistentMessages,
+    addMessage,
+    updateMessageStreaming,
+    editMessageAndFork,
+    clearMessages: clearPersistentMessages,
+    isLoading: messagesLoading,
+  } = useChatMessages(currentSessionId);
+  
+  // Merge persistent messages with any streaming context messages
+  const messages = persistentMessages.length > 0 ? persistentMessages : contextMessages.map(m => ({
+    id: m.id,
+    sessionId: currentSessionId || '',
+    role: m.role,
+    content: m.content,
+    parentMessageId: null,
+    isActive: true,
+    createdAt: m.timestamp,
+    isStreaming: m.isStreaming,
+  }));
   
   const [inputValue, setInputValue] = useState('');
   const [isResearchMode, setIsResearchMode] = useState(false);
   const [showPICO, setShowPICO] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -44,20 +70,94 @@ export const ChatPanel = () => {
     }
   }, [isPanelOpen]);
 
+  // Auto-rename session based on first user message
+  const autoRenameSession = useCallback(async (content: string) => {
+    if (currentSessionId && messages.length === 0) {
+      const sessionName = content.slice(0, 40) + (content.length > 40 ? '...' : '');
+      await renameSession(currentSessionId, sessionName);
+    }
+  }, [currentSessionId, messages.length, renameSession]);
+
+  const handleSendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
+    if (!content.trim() || isLoading || !currentSessionId) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Auto-rename session on first message
+      await autoRenameSession(content);
+      
+      // Add user message to persistent storage
+      const userMessage = await addMessage('user', content);
+      if (!userMessage) throw new Error('Failed to add user message');
+      
+      // Create placeholder for assistant message
+      const assistantMessage = await addMessage('assistant', '', true);
+      if (!assistantMessage) throw new Error('Failed to add assistant message');
+      streamingMessageIdRef.current = assistantMessage.id;
+      
+      // Send to API and stream response
+      await sendContextMessage(content, action);
+      
+      // The context's sendMessage will update the messages via useEffect
+      // For now, we'll finalize the streaming message
+      if (streamingMessageIdRef.current) {
+        // Get the final content from context messages
+        const lastContextMessage = contextMessages[contextMessages.length - 1];
+        if (lastContextMessage && lastContextMessage.role === 'assistant') {
+          updateMessageStreaming(streamingMessageIdRef.current, lastContextMessage.content, false);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
+      streamingMessageIdRef.current = null;
+    }
+  }, [isLoading, currentSessionId, autoRenameSession, addMessage, sendContextMessage, contextMessages, updateMessageStreaming]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
     
     const message = inputValue;
     setInputValue('');
-    await sendMessage(message, isResearchMode ? 'research' : 'chat');
+    await handleSendMessage(message, isResearchMode ? 'research' : 'chat');
   };
 
   const handleQuickAction = async (message: string, action: 'chat' | 'research' | 'find-sources') => {
-    await sendMessage(message, action);
+    await handleSendMessage(message, action);
+  };
+
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    const result = await editMessageAndFork(messageId, newContent);
+    if (result) {
+      // Re-send the edited message to get new AI response
+      setIsLoading(true);
+      try {
+        const assistantMessage = await addMessage('assistant', '', true);
+        if (assistantMessage) {
+          streamingMessageIdRef.current = assistantMessage.id;
+          await sendContextMessage(newContent, 'chat');
+          
+          const lastContextMessage = contextMessages[contextMessages.length - 1];
+          if (lastContextMessage && lastContextMessage.role === 'assistant') {
+            updateMessageStreaming(assistantMessage.id, lastContextMessage.content, false);
+          }
+        }
+      } finally {
+        setIsLoading(false);
+        streamingMessageIdRef.current = null;
+      }
+    }
+  };
+
+  const handleClearMessages = async () => {
+    await clearPersistentMessages();
   };
 
   const hasVerificationResults = projectContext.claims.length > 0;
+  const loading = isLoading || contextLoading || messagesLoading;
 
   return (
     <>
@@ -81,7 +181,7 @@ export const ChatPanel = () => {
                 {language === 'fr' ? 'Assistant ProofCheck' : 'ProofCheck Assistant'}
               </SheetTitle>
               {messages.length > 0 && (
-                <Button variant="ghost" size="icon" onClick={clearMessages} className="h-8 w-8">
+                <Button variant="ghost" size="icon" onClick={handleClearMessages} className="h-8 w-8">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
@@ -125,12 +225,14 @@ export const ChatPanel = () => {
             ) : (
               <div className="divide-y divide-border">
                 {messages.map((message) => (
-                  <ChatMessage 
-                    key={message.id} 
-                    message={message}
-                    onAddArticle={addSourceFromSearch}
-                    addedArticleIds={addedArticleIds}
-                  />
+                  <div key={message.id} className="group">
+                    <ChatMessage 
+                      message={message}
+                      onAddArticle={addSourceFromSearch}
+                      addedArticleIds={addedArticleIds}
+                      onEditMessage={message.role === 'user' ? handleEditMessage : undefined}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -144,11 +246,11 @@ export const ChatPanel = () => {
               <PICOSearchForm 
                 onSearch={handleQuickAction}
                 onClose={() => setShowPICO(false)}
-                disabled={isLoading}
+                disabled={loading}
               />
             </div>
           ) : (
-            <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={isLoading} />
+            <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={loading} />
           )}
 
           <form onSubmit={handleSubmit} className="p-4 border-t border-border flex-shrink-0">
@@ -181,10 +283,10 @@ export const ChatPanel = () => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={language === 'fr' ? 'Posez une question...' : 'Ask a question...'}
-                disabled={isLoading}
+                disabled={loading}
                 className="flex-1"
               />
-              <Button type="submit" size="icon" disabled={isLoading || !inputValue.trim()}>
+              <Button type="submit" size="icon" disabled={loading || !inputValue.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
