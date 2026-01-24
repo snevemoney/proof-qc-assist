@@ -6,6 +6,7 @@ import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
 import { ChatPanel } from './ChatPanel';
 import { OnboardingModal } from './OnboardingModal';
+import { SubmissionReadiness } from './SubmissionReadiness';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
@@ -167,6 +168,13 @@ const ProjectWorkspaceContent = () => {
           {language === 'fr' ? 'Sauvegarde...' : 'Saving...'}
         </div>
       )}
+      
+      {/* Submission Readiness Progress Bar */}
+      <SubmissionReadiness 
+        claims={claims} 
+        hasVerified={hasVerified}
+        onNavigateToReport={() => setActiveTab('report')}
+      />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-3">

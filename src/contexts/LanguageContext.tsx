@@ -78,6 +78,13 @@ const translations = {
     'chat.findEvidence': 'Find more evidence',
     'chat.citationHelp': 'Citation help',
     'chat.improveWriting': 'Improve my writing',
+    
+    // Readiness
+    'readiness.title': 'Submission Readiness',
+    'readiness.ready': 'Ready to submit!',
+    'readiness.almostReady': 'Almost there - minor fixes needed',
+    'readiness.goodProgress': 'Good progress - some claims need support',
+    'readiness.needsWork': 'Needs work - several claims unsupported',
   },
   fr: {
     // Tabs
@@ -148,6 +155,13 @@ const translations = {
     'chat.findEvidence': 'Trouver plus de preuves',
     'chat.citationHelp': 'Aide aux citations',
     'chat.improveWriting': 'Améliorer mon écriture',
+    
+    // Readiness
+    'readiness.title': 'Prêt à soumettre',
+    'readiness.ready': 'Prêt à soumettre!',
+    'readiness.almostReady': 'Presque prêt - corrections mineures',
+    'readiness.goodProgress': 'Bon progrès - certaines affirmations à vérifier',
+    'readiness.needsWork': 'À améliorer - plusieurs affirmations non soutenues',
   },
 };
 
