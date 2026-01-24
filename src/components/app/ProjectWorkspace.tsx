@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { verifyClaims, type Source, VerificationError } from '@/lib/verification';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useProject } from '@/hooks/useProject';
@@ -21,6 +22,7 @@ import { useSavedDrafts } from '@/hooks/useSavedDrafts';
 const ProjectWorkspaceContent = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { setProjectContext, setExternalMessages, setOnMessagesChange } = useChat();
   
   const {
@@ -53,15 +55,13 @@ const ProjectWorkspaceContent = () => {
   const [verificationError, setVerificationError] = useState<VerificationError | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Reset verification state if history loads empty but hasVerified is true (stale state)
+  // Reset stale verification flag for logged-in users when history is empty
+  // Skip for anonymous users since they don't have history persistence
   useEffect(() => {
-    if (!historyLoading && hasVerified && history.length === 0) {
-      setClaims([]);
-      setInterventions([]);
-      setSummary(null);
+    if (user && !historyLoading && hasVerified && history.length === 0 && claims.length === 0) {
       setHasVerified(false);
     }
-  }, [historyLoading, hasVerified, history.length, setClaims, setInterventions, setSummary, setHasVerified]);
+  }, [user, historyLoading, hasVerified, history.length, claims.length, setHasVerified]);
 
   // Sync project context with chat
   useEffect(() => {
