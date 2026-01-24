@@ -100,18 +100,40 @@ const ProjectWorkspaceContent = () => {
     const success = await deleteFromHistory(id);
     
     if (success) {
-      // Reset the current verification state
-      setClaims([]);
-      setInterventions([]);
-      setSummary(null);
-      setHasVerified(false);
+      // Filter out the deleted entry to find remaining history
+      const remainingHistory = history.filter(entry => entry.id !== id);
       
-      toast({
-        title: language === 'fr' ? 'Rapport supprimé' : 'Report deleted',
-        description: language === 'fr' 
-          ? 'Lancez une nouvelle vérification ou restaurez un historique'
-          : 'Run a new verification or restore from history',
-      });
+      if (remainingHistory.length > 0) {
+        // Auto-restore the most recent remaining entry
+        const mostRecent = remainingHistory[0]; // Already sorted by created_at desc
+        setClaims(mostRecent.claims);
+        setInterventions((mostRecent as any).interventions || []);
+        setSummary(mostRecent.summary);
+        setSources(mostRecent.sourcesSnapshot);
+        setDraftText(mostRecent.draftText);
+        setStrictMode(mostRecent.strictMode);
+        setHasVerified(true);
+        
+        toast({
+          title: language === 'fr' ? 'Rapport supprimé' : 'Report deleted',
+          description: language === 'fr' 
+            ? 'Le rapport précédent a été restauré'
+            : 'Previous report has been restored',
+        });
+      } else {
+        // No remaining history, reset to empty state
+        setClaims([]);
+        setInterventions([]);
+        setSummary(null);
+        setHasVerified(false);
+        
+        toast({
+          title: language === 'fr' ? 'Rapport supprimé' : 'Report deleted',
+          description: language === 'fr' 
+            ? 'Lancez une nouvelle vérification'
+            : 'Run a new verification',
+        });
+      }
     }
   };
 
