@@ -243,15 +243,15 @@ export const ChatPanel = () => {
       {/* Always mounted to avoid Radix portal race conditions */}
       <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
         <SheetContent side="right" className="w-full sm:w-[450px] sm:max-w-[450px] p-0 flex flex-col h-full overflow-hidden">
-          <SheetHeader className="p-4 border-b border-border flex-shrink-0">
+          <SheetHeader className="p-3 sm:p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between">
-              <SheetTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                {language === 'fr' ? 'Assistant ProofCheck' : 'ProofCheck Assistant'}
+              <SheetTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <span className="truncate">{language === 'fr' ? 'Assistant ProofCheck' : 'ProofCheck Assistant'}</span>
               </SheetTitle>
               {messages.length > 0 && (
-                <Button variant="ghost" size="icon" onClick={handleClearMessages} className="h-8 w-8">
-                  <Trash2 className="h-4 w-4" />
+                <Button variant="ghost" size="icon" onClick={handleClearMessages} className="h-7 w-7 sm:h-8 sm:w-8">
+                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               )}
             </div>
@@ -352,21 +352,21 @@ export const ChatPanel = () => {
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
               <span className={cn(
-                "text-xs px-2 py-1 rounded-full",
+                "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
                 projectContext.sources.length > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               )}>
                 {projectContext.sources.length} sources
               </span>
               <span className={cn(
-                "text-xs px-2 py-1 rounded-full",
+                "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
                 projectContext.draftText.length > 0 ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
               )}>
                 {language === 'fr' ? 'Brouillon' : 'Draft'} {projectContext.draftText.length > 0 ? '✓' : '—'}
               </span>
               <span className={cn(
-                "text-xs px-2 py-1 rounded-full",
+                "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
                 hasVerificationResults ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
               )}>
                 {projectContext.claims.length} {language === 'fr' ? 'affirmations' : 'claims'}
@@ -410,23 +410,24 @@ export const ChatPanel = () => {
           {/* Quick Actions - Always visible */}
           <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={loading} />
 
-          <form onSubmit={handleSubmit} className="p-4 border-t border-border flex-shrink-0">
-            <div className="flex gap-2 mb-2">
+          <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t border-border flex-shrink-0">
+            <div className="flex gap-1.5 sm:gap-2 mb-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible sm:pb-0">
               <Button
                 type="button"
                 variant={isResearchMode ? "default" : "outline"}
                 size="sm"
-                className="text-xs gap-1"
+                className="text-xs gap-1 flex-shrink-0"
                 onClick={() => setIsResearchMode(!isResearchMode)}
               >
                 <Sparkles className="h-3 w-3" />
-                {language === 'fr' ? 'Recherche' : 'Research'}
+                <span className="hidden sm:inline">{language === 'fr' ? 'Recherche' : 'Research'}</span>
+                <span className="sm:hidden">🔬</span>
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="text-xs gap-1"
+                className="text-xs gap-1 flex-shrink-0"
                 disabled={loading || !projectContext.draftText}
                 onClick={() => handleQuickAction(
                   language === 'fr' 
@@ -443,7 +444,7 @@ export const ChatPanel = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="text-xs gap-1"
+                className="text-xs gap-1 flex-shrink-0"
                 disabled={loading || !projectContext.draftText}
                 onClick={() => handleQuickAction(
                   language === 'fr' 
@@ -454,7 +455,8 @@ export const ChatPanel = () => {
                 title={!projectContext.draftText ? (language === 'fr' ? 'Ajoutez un brouillon d\'abord' : 'Add a draft first') : ''}
               >
                 <Key className="h-3 w-3" />
-                {language === 'fr' ? 'Mots-clés' : 'Keywords'}
+                <span className="hidden sm:inline">{language === 'fr' ? 'Mots-clés' : 'Keywords'}</span>
+                <span className="sm:hidden">🔑</span>
               </Button>
             </div>
             
@@ -465,9 +467,9 @@ export const ChatPanel = () => {
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={language === 'fr' ? 'Posez une question...' : 'Ask a question...'}
                 disabled={loading}
-                className="flex-1"
+                className="flex-1 text-sm"
               />
-              <Button type="submit" size="icon" disabled={loading || !inputValue.trim()}>
+              <Button type="submit" size="icon" disabled={loading || !inputValue.trim()} className="h-9 w-9 sm:h-10 sm:w-10">
                 <Send className="h-4 w-4" />
               </Button>
             </div>
