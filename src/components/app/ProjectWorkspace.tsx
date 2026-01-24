@@ -11,8 +11,9 @@ import { ReadinessIndicator } from './ReadinessIndicator';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
 import { useProjectContext } from '@/contexts/ProjectContext';
-import { verifyClaims, type Source } from '@/lib/verification';
+import { verifyClaims, type Source, VerificationError } from '@/lib/verification';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { useProject } from '@/hooks/useProject';
 import { useVerificationHistory, VerificationHistoryEntry } from '@/hooks/useVerificationHistory';
 import { useSavedDrafts } from '@/hooks/useSavedDrafts';
@@ -49,6 +50,8 @@ const ProjectWorkspaceContent = () => {
   const { history, isLoading: historyLoading, saveToHistory, deleteFromHistory } = useVerificationHistory();
   const { savedDrafts, isLoading: savedDraftsLoading, saveDraft, deleteDraft } = useSavedDrafts();
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState<VerificationError | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Reset verification state if history loads empty but hasVerified is true (stale state)
   useEffect(() => {
@@ -150,15 +153,36 @@ const ProjectWorkspaceContent = () => {
   const handleVerify = async () => {
     console.log('handleVerify: Starting verification...');
     setIsVerifying(true);
+    setVerificationError(null);
+    setRetryCount(0);
+    
     try {
       console.log('handleVerify: Calling verifyClaims with', sources.length, 'sources');
-      const result = await verifyClaims(sources, draftText, strictMode, language);
+      const result = await verifyClaims(
+        sources, 
+        draftText, 
+        strictMode, 
+        language,
+        (attempt, error, delayMs) => {
+          setRetryCount(attempt);
+          console.log(`handleVerify: Retry attempt ${attempt}, delay ${delayMs}ms`, error);
+          toast({
+            title: language === 'fr' ? 'Nouvelle tentative...' : 'Retrying...',
+            description: language === 'fr' 
+              ? `Tentative ${attempt}/2 - Veuillez patienter` 
+              : `Attempt ${attempt}/2 - Please wait`,
+          });
+        }
+      );
       console.log('handleVerify: Got result:', result);
       
       // Validate result structure
       if (!result || !Array.isArray(result.claims)) {
-        throw new Error('Invalid verification response structure');
+        throw new VerificationError('parse_error', 'Invalid verification response structure', true);
       }
+      
+      // Clear error on success
+      setVerificationError(null);
       
       // Update state except activeTab, then switch tab after a brief delay
       await updateStateImmediate({
@@ -168,10 +192,10 @@ const ProjectWorkspaceContent = () => {
         hasVerified: true,
       });
       
-      // Small delay before tab switch to let dialogs properly unmount
+      // Increased delay before tab switch to let dialogs properly unmount
       setTimeout(() => {
         setActiveTab('report');
-      }, 50);
+      }, 150);
       
       console.log('handleVerify: State updated and saved');
 
@@ -193,13 +217,27 @@ const ProjectWorkspaceContent = () => {
       });
     } catch (error) {
       console.error('handleVerify: Error:', error);
+      
+      // Classify error properly
+      const verifyError = error instanceof VerificationError 
+        ? error 
+        : new VerificationError('unknown', error instanceof Error ? error.message : 'Unknown error', false);
+      
+      setVerificationError(verifyError);
+      
       toast({
         title: language === 'fr' ? 'Erreur de vérification' : 'Verification error',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: verifyError.message,
         variant: 'destructive',
+        action: verifyError.isRetryable ? (
+          <ToastAction altText={language === 'fr' ? 'Réessayer' : 'Retry'} onClick={handleVerify}>
+            {language === 'fr' ? 'Réessayer' : 'Retry'}
+          </ToastAction>
+        ) : undefined,
       });
     } finally {
       setIsVerifying(false);
+      setRetryCount(0);
       console.log('handleVerify: Finished');
     }
   };
@@ -273,6 +311,8 @@ const ProjectWorkspaceContent = () => {
               savedDraftsLoading={savedDraftsLoading}
               onSaveDraft={saveDraft}
               onDeleteDraft={deleteDraft}
+              verificationError={verificationError}
+              retryCount={retryCount}
             />
           </TabsContent>
 

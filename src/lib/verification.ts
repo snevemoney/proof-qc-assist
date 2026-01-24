@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { VerificationError, classifyError } from './verificationErrors';
 
 export interface Source {
   id: string;
@@ -64,14 +65,72 @@ export interface VerificationResult {
   summary: VerificationSummary;
 }
 
-export async function verifyClaims(
+// Retry configuration
+interface RetryConfig {
+  maxRetries: number;
+  baseDelayMs: number;
+  maxDelayMs: number;
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 2,
+  baseDelayMs: 2000,
+  maxDelayMs: 8000,
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  config: RetryConfig = DEFAULT_RETRY_CONFIG,
+  onRetry?: (attempt: number, error: Error, delayMs: number) => void
+): Promise<T> {
+  let lastError: Error = new Error('Unknown error');
+
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      // Don't retry non-retryable errors
+      if (error instanceof VerificationError && !error.isRetryable) {
+        throw error;
+      }
+
+      // Don't retry on last attempt
+      if (attempt >= config.maxRetries) {
+        break;
+      }
+
+      // Calculate delay with exponential backoff
+      const delay = Math.min(
+        config.baseDelayMs * Math.pow(2, attempt),
+        config.maxDelayMs
+      );
+
+      // Check if error has a specific retry-after value
+      const retryAfter = (error as VerificationError)?.retryAfterMs;
+      const actualDelay = retryAfter || delay;
+
+      onRetry?.(attempt + 1, lastError, actualDelay);
+      await sleep(actualDelay);
+    }
+  }
+
+  throw lastError;
+}
+
+async function performVerification(
   sources: Source[],
   draftText: string,
   strictMode: boolean,
   language: 'fr' | 'en'
 ): Promise<VerificationResult> {
   console.log('verifyClaims: Starting with', sources.length, 'sources, draftText length:', draftText.length);
-  
+
   const requestBody = {
     sources: sources.map(s => ({
       id: s.id,
@@ -84,61 +143,53 @@ export async function verifyClaims(
     strictMode,
     language,
   };
-  
+
   console.log('verifyClaims: Request body:', JSON.stringify(requestBody, null, 2).substring(0, 500));
-  
+
   const { data, error } = await supabase.functions.invoke('verify-claims', {
     body: requestBody,
   });
-  
+
   console.log('verifyClaims: Response - data:', data, 'error:', error);
 
   if (error) {
-    // Try to extract a more specific error message from FunctionsHttpError.context
-    // supabase-js often wraps non-2xx responses with a generic message.
-    const anyErr = error as unknown as {
-      message?: string;
-      context?: { status?: number; body?: string | unknown };
-    };
-
-    let status = anyErr.context?.status;
-    let errorMessage = anyErr.message || '';
-
-    const body = anyErr.context?.body;
-    if (typeof body === 'string' && body.trim()) {
-      try {
-        const parsed = JSON.parse(body);
-        if (typeof parsed?.error === 'string' && parsed.error.trim()) {
-          errorMessage = parsed.error;
-        }
-      } catch {
-        // keep generic message
-      }
-    } else if (body && typeof body === 'object') {
-      const maybe = body as any;
-      if (typeof maybe?.error === 'string' && maybe.error.trim()) {
-        errorMessage = maybe.error;
-      }
-    }
-    
-    if (status === 402 || errorMessage.includes('402') || errorMessage.includes('Payment')) {
-      throw new Error(language === 'fr' 
-        ? 'Crédits IA insuffisants. Veuillez réessayer plus tard ou contacter le support.'
-        : 'Insufficient AI credits. Please try again later or contact support.');
-    }
-    
-    if (status === 429 || errorMessage.includes('429') || errorMessage.includes('Rate')) {
-      throw new Error(language === 'fr'
-        ? 'Limite de requêtes atteinte. Veuillez patienter quelques minutes.'
-        : 'Rate limit exceeded. Please wait a few minutes.');
-    }
-    
-    throw new Error(errorMessage || (language === 'fr' ? 'La vérification a échoué' : 'Verification failed'));
+    // Classify and throw appropriate VerificationError
+    throw classifyError(error, language);
   }
 
   if (data?.error) {
-    throw new Error(data.error);
+    // Server returned an error in the response body
+    const serverError = new Error(data.error);
+    throw classifyError(serverError, language);
+  }
+
+  // Validate response structure
+  if (!data || !Array.isArray(data.claims)) {
+    throw new VerificationError(
+      'parse_error',
+      language === 'fr' 
+        ? 'Réponse invalide du serveur' 
+        : 'Invalid server response',
+      true
+    );
   }
 
   return data as VerificationResult;
 }
+
+export async function verifyClaims(
+  sources: Source[],
+  draftText: string,
+  strictMode: boolean,
+  language: 'fr' | 'en',
+  onRetry?: (attempt: number, error: Error, delayMs: number) => void
+): Promise<VerificationResult> {
+  return withRetry(
+    () => performVerification(sources, draftText, strictMode, language),
+    DEFAULT_RETRY_CONFIG,
+    onRetry
+  );
+}
+
+// Re-export VerificationError for convenience
+export { VerificationError } from './verificationErrors';

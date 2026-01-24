@@ -49,6 +49,8 @@ const translations = {
     'draft.draftSaved': 'Draft saved',
     'draft.draftLoaded': 'Draft loaded',
     'draft.draftDeleted': 'Draft deleted',
+    'draft.retry': 'Retry',
+    'draft.retrying': 'Retrying...',
     
     // Report
     'report.empty.title': 'No verification yet',
@@ -145,6 +147,8 @@ const translations = {
     'draft.draftSaved': 'Brouillon sauvegardé',
     'draft.draftLoaded': 'Brouillon chargé',
     'draft.draftDeleted': 'Brouillon supprimé',
+    'draft.retry': 'Réessayer',
+    'draft.retrying': 'Nouvelle tentative...',
     
     // Report
     'report.empty.title': 'Aucune vérification',

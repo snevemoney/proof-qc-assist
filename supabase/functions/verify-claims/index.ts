@@ -154,124 +154,143 @@ ${draftText}
 
 ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0,
-        messages: [
-          { role: "system", content: language === 'fr' ? systemPromptFR : systemPromptEN },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "suggest_claims",
-              description: "Return the verification results for all claims and interventions found in the draft",
-              parameters: {
-                type: "object",
-                properties: {
-                  claims: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        text: { 
-                          type: "string",
-                          description: "The exact claim text from the student's draft"
+    // Create AbortController for timeout (90 seconds for complex drafts)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+    let response: Response;
+    try {
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          temperature: 0,
+          messages: [
+            { role: "system", content: language === 'fr' ? systemPromptFR : systemPromptEN },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "suggest_claims",
+                description: "Return the verification results for all claims and interventions found in the draft",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    claims: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          text: { 
+                            type: "string",
+                            description: "The exact claim text from the student's draft"
+                          },
+                          status: { 
+                            type: "string", 
+                            enum: ["supported", "partial", "unsupported", "contradicted"],
+                            description: "The verification status of this claim"
+                          },
+                          sourceRef: { 
+                            type: "string",
+                            description: "Source reference like [S1] or [S1, S2] if applicable"
+                          },
+                          evidence: { 
+                            type: "string",
+                            description: "Direct quote or paraphrase from the source supporting or contradicting the claim"
+                          },
+                          suggestion: { 
+                            type: "string",
+                            description: "Helpful suggestion for the student on how to improve this claim"
+                          }
                         },
-                        status: { 
-                          type: "string", 
-                          enum: ["supported", "partial", "unsupported", "contradicted"],
-                          description: "The verification status of this claim"
-                        },
-                        sourceRef: { 
-                          type: "string",
-                          description: "Source reference like [S1] or [S1, S2] if applicable"
-                        },
-                        evidence: { 
-                          type: "string",
-                          description: "Direct quote or paraphrase from the source supporting or contradicting the claim"
-                        },
-                        suggestion: { 
-                          type: "string",
-                          description: "Helpful suggestion for the student on how to improve this claim"
-                        }
-                      },
-                      required: ["text", "status"],
-                      additionalProperties: false
-                    }
-                  },
-                  interventions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        text: {
-                          type: "string",
-                          description: "The nursing intervention text from the student's draft"
-                        },
-                        severity: {
-                          type: "string",
-                          enum: ["critical", "standard", "optional"],
-                          description: "Priority level: critical (life/safety), standard (core care), optional (comfort/preference)"
-                        },
-                        hasEvidence: {
-                          type: "boolean",
-                          description: "Whether this intervention is supported by research evidence in the sources"
-                        },
-                        hasRationale: {
-                          type: "boolean",
-                          description: "Whether the student explains WHY this intervention is clinically appropriate"
-                        },
-                        sourceRef: {
-                          type: "string",
-                          description: "Source reference like [S1] if evidence is found"
-                        },
-                        rationaleText: {
-                          type: "string",
-                          description: "The extracted rationale text if present"
-                        },
-                        suggestion: {
-                          type: "string",
-                          description: "Helpful suggestion for the student if evidence or rationale is missing"
-                        }
-                      },
-                      required: ["text", "severity", "hasEvidence", "hasRationale"],
-                      additionalProperties: false
-                    }
-                  },
-                  summary: {
-                    type: "object",
-                    properties: {
-                      totalClaims: { type: "number" },
-                      supported: { type: "number" },
-                      partial: { type: "number" },
-                      unsupported: { type: "number" },
-                      contradicted: { type: "number" },
-                      overallFeedback: { type: "string" },
-                      totalInterventions: { type: "number" },
-                      interventionsWithEvidence: { type: "number" },
-                      interventionsWithRationale: { type: "number" }
+                        required: ["text", "status"],
+                        additionalProperties: false
+                      }
                     },
-                    required: ["totalClaims", "supported", "partial", "unsupported", "contradicted", "totalInterventions", "interventionsWithEvidence", "interventionsWithRationale"],
-                    additionalProperties: false
-                  }
-                },
-                required: ["claims", "interventions", "summary"],
-                additionalProperties: false
+                    interventions: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          text: {
+                            type: "string",
+                            description: "The nursing intervention text from the student's draft"
+                          },
+                          severity: {
+                            type: "string",
+                            enum: ["critical", "standard", "optional"],
+                            description: "Priority level: critical (life/safety), standard (core care), optional (comfort/preference)"
+                          },
+                          hasEvidence: {
+                            type: "boolean",
+                            description: "Whether this intervention is supported by research evidence in the sources"
+                          },
+                          hasRationale: {
+                            type: "boolean",
+                            description: "Whether the student explains WHY this intervention is clinically appropriate"
+                          },
+                          sourceRef: {
+                            type: "string",
+                            description: "Source reference like [S1] if evidence is found"
+                          },
+                          rationaleText: {
+                            type: "string",
+                            description: "The extracted rationale text if present"
+                          },
+                          suggestion: {
+                            type: "string",
+                            description: "Helpful suggestion for the student if evidence or rationale is missing"
+                          }
+                        },
+                        required: ["text", "severity", "hasEvidence", "hasRationale"],
+                        additionalProperties: false
+                      }
+                    },
+                    summary: {
+                      type: "object",
+                      properties: {
+                        totalClaims: { type: "number" },
+                        supported: { type: "number" },
+                        partial: { type: "number" },
+                        unsupported: { type: "number" },
+                        contradicted: { type: "number" },
+                        overallFeedback: { type: "string" },
+                        totalInterventions: { type: "number" },
+                        interventionsWithEvidence: { type: "number" },
+                        interventionsWithRationale: { type: "number" }
+                      },
+                      required: ["totalClaims", "supported", "partial", "unsupported", "contradicted", "totalInterventions", "interventionsWithEvidence", "interventionsWithRationale"],
+                      additionalProperties: false
+                    }
+                  },
+                  required: ["claims", "interventions", "summary"],
+                  additionalProperties: false
+                }
               }
             }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "suggest_claims" } },
-      }),
-    });
+          ],
+          tool_choice: { type: "function", function: { name: "suggest_claims" } },
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if ((fetchError as Error).name === 'AbortError') {
+        return new Response(
+          JSON.stringify({ error: language === 'fr' ? "La vérification a pris trop de temps. Veuillez réessayer." : "Verification timed out. Please try again." }),
+          { status: 408, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw fetchError;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
