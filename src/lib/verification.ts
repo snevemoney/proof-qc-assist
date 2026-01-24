@@ -32,9 +32,12 @@ export interface Claim {
   suggestion?: string;
 }
 
+export type InterventionSeverity = 'critical' | 'standard' | 'optional';
+
 export interface Intervention {
   id: string;
   text: string;
+  severity: InterventionSeverity;
   hasEvidence: boolean;
   hasRationale: boolean;
   sourceRef?: string;

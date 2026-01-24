@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen, ShieldAlert, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useChat } from '@/contexts/ChatContext';
-import type { Claim, Intervention, VerificationSummary } from '@/lib/verification';
+import type { Claim, Intervention, VerificationSummary, InterventionSeverity } from '@/lib/verification';
 import type { VerificationHistoryEntry } from '@/hooks/useVerificationHistory';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -47,6 +47,16 @@ const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass:
 // Fallback for unknown statuses from AI
 const getStatusConfig = (status: string) => {
   return statusConfig[status as ClaimStatus] || statusConfig['unsupported'];
+};
+
+const severityConfig: Record<InterventionSeverity, { icon: typeof ShieldAlert; colorClass: string; bgClass: string }> = {
+  critical: { icon: ShieldAlert, colorClass: 'text-destructive', bgClass: 'bg-destructive/10 border-destructive/30' },
+  standard: { icon: Shield, colorClass: 'text-primary', bgClass: 'bg-primary/10 border-primary/30' },
+  optional: { icon: ShieldCheck, colorClass: 'text-muted-foreground', bgClass: 'bg-muted border-muted-foreground/30' },
+};
+
+const getSeverityConfig = (severity: string) => {
+  return severityConfig[severity as InterventionSeverity] || severityConfig['standard'];
 };
 
 export const ReportTab = ({
@@ -308,78 +318,107 @@ export const ReportTab = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {interventions.map((intervention) => {
-              const hasIssues = !intervention.hasEvidence || !intervention.hasRationale;
+            {/* Group interventions by severity */}
+            {(['critical', 'standard', 'optional'] as InterventionSeverity[]).map(severityLevel => {
+              const sevConfig = getSeverityConfig(severityLevel);
+              const SeverityIcon = sevConfig.icon;
+              const interventionsInGroup = interventions.filter(i => (i.severity || 'standard') === severityLevel);
+              
+              if (interventionsInGroup.length === 0) return null;
               
               return (
-                <div key={intervention.id} className="border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-start gap-3">
-                    <Stethoscope className={`h-5 w-5 mt-0.5 ${hasIssues ? 'text-warning' : 'text-success'}`} />
-                    <div className="flex-1 space-y-2">
-                      <p className="text-sm text-foreground">{intervention.text}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {/* Evidence badge */}
-                        <Badge 
-                          variant={intervention.hasEvidence ? 'default' : 'outline'}
-                          className={`text-xs ${intervention.hasEvidence ? 'bg-success/10 text-success border-success/30' : 'text-caution border-caution/30'}`}
-                        >
-                          <BookOpen className="h-3 w-3 mr-1" />
-                          {intervention.hasEvidence 
-                            ? t('intervention.evidenceBased')
-                            : t('intervention.missingEvidence')
-                          }
-                        </Badge>
-                        
-                        {/* Rationale badge */}
-                        <Badge 
-                          variant={intervention.hasRationale ? 'default' : 'outline'}
-                          className={`text-xs ${intervention.hasRationale ? 'bg-success/10 text-success border-success/30' : 'text-caution border-caution/30'}`}
-                        >
-                          <FileText className="h-3 w-3 mr-1" />
-                          {intervention.hasRationale 
-                            ? t('intervention.rationaleProvided')
-                            : t('intervention.missingRationale')
-                          }
-                        </Badge>
-                        
-                        {intervention.sourceRef && (
-                          <Badge variant="secondary" className="text-xs">
-                            {intervention.sourceRef}
-                          </Badge>
-                        )}
-                        
-                        {!intervention.hasEvidence && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                            onClick={() => {
-                              // Use chat to find evidence for this intervention
-                              const query = language === 'fr'
-                                ? `Trouve des articles académiques pour soutenir cette intervention infirmière: "${intervention.text}"`
-                                : `Find academic articles to support this nursing intervention: "${intervention.text}"`;
-                              findArticlesForClaim({ id: intervention.id, text: intervention.text, status: 'unsupported' });
-                            }}
-                          >
-                            <Search className="h-3 w-3" />
-                            {t('intervention.findEvidence')}
-                          </Button>
-                        )}
-                      </div>
-                      
-                      {intervention.rationaleText && (
-                        <p className="text-xs text-muted-foreground bg-muted p-2 rounded italic">
-                          "{intervention.rationaleText}"
-                        </p>
-                      )}
-                      
-                      {intervention.suggestion && (
-                        <p className="text-xs text-primary">
-                          💡 {intervention.suggestion}
-                        </p>
-                      )}
-                    </div>
+                <div key={severityLevel} className="space-y-3">
+                  <div className="flex items-center gap-2 pt-2 first:pt-0">
+                    <SeverityIcon className={`h-4 w-4 ${sevConfig.colorClass}`} />
+                    <span className={`text-sm font-medium ${sevConfig.colorClass}`}>
+                      {t(`intervention.${severityLevel}`)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({t(`intervention.${severityLevel}Desc`)})
+                    </span>
                   </div>
+                  
+                  {interventionsInGroup.map((intervention) => {
+                    const hasIssues = !intervention.hasEvidence || !intervention.hasRationale;
+                    const isCriticalMissingEvidence = severityLevel === 'critical' && !intervention.hasEvidence;
+                    
+                    return (
+                      <div key={intervention.id} className={`border-l-2 pl-4 pb-3 ${isCriticalMissingEvidence ? 'border-destructive bg-destructive/5 rounded-r' : 'border-muted'}`}>
+                        <div className="flex items-start gap-3">
+                          <Stethoscope className={`h-5 w-5 mt-0.5 ${hasIssues ? (isCriticalMissingEvidence ? 'text-destructive' : 'text-warning') : 'text-success'}`} />
+                          <div className="flex-1 space-y-2">
+                            <p className="text-sm text-foreground">{intervention.text}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Severity badge */}
+                              <Badge 
+                                variant="outline"
+                                className={`text-xs ${sevConfig.bgClass} ${sevConfig.colorClass}`}
+                              >
+                                <SeverityIcon className="h-3 w-3 mr-1" />
+                                {t(`intervention.${severityLevel}`)}
+                              </Badge>
+                              
+                              {/* Evidence badge */}
+                              <Badge 
+                                variant={intervention.hasEvidence ? 'default' : 'outline'}
+                                className={`text-xs ${intervention.hasEvidence ? 'bg-success/10 text-success border-success/30' : (isCriticalMissingEvidence ? 'text-destructive border-destructive/30' : 'text-caution border-caution/30')}`}
+                              >
+                                <BookOpen className="h-3 w-3 mr-1" />
+                                {intervention.hasEvidence 
+                                  ? t('intervention.evidenceBased')
+                                  : t('intervention.missingEvidence')
+                                }
+                              </Badge>
+                              
+                              {/* Rationale badge */}
+                              <Badge 
+                                variant={intervention.hasRationale ? 'default' : 'outline'}
+                                className={`text-xs ${intervention.hasRationale ? 'bg-success/10 text-success border-success/30' : 'text-caution border-caution/30'}`}
+                              >
+                                <FileText className="h-3 w-3 mr-1" />
+                                {intervention.hasRationale 
+                                  ? t('intervention.rationaleProvided')
+                                  : t('intervention.missingRationale')
+                                }
+                              </Badge>
+                              
+                              {intervention.sourceRef && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {intervention.sourceRef}
+                                </Badge>
+                              )}
+                              
+                              {!intervention.hasEvidence && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                  onClick={() => {
+                                    findArticlesForClaim({ id: intervention.id, text: intervention.text, status: 'unsupported' });
+                                  }}
+                                >
+                                  <Search className="h-3 w-3" />
+                                  {t('intervention.findEvidence')}
+                                </Button>
+                              )}
+                            </div>
+                            
+                            {intervention.rationaleText && (
+                              <p className="text-xs text-muted-foreground bg-muted p-2 rounded italic">
+                                "{intervention.rationaleText}"
+                              </p>
+                            )}
+                            
+                            {intervention.suggestion && (
+                              <p className={`text-xs ${isCriticalMissingEvidence ? 'text-destructive font-medium' : 'text-primary'}`}>
+                                💡 {intervention.suggestion}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
