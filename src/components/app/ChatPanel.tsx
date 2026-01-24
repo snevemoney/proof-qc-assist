@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, MessageCircle, Sparkles, Trash2, Stethoscope } from 'lucide-react';
+import { Send, MessageCircle, Sparkles, Trash2, Stethoscope, ChevronDown, Plus, Check, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,7 +16,14 @@ import { cn } from '@/lib/utils';
 
 export const ChatPanel = () => {
   const { language } = useLanguage();
-  const { currentSessionId, renameSession } = useProjectContext();
+  const { 
+    currentSessionId, 
+    sessions, 
+    setCurrentSessionId, 
+    createSession, 
+    renameSession, 
+    deleteSession 
+  } = useProjectContext();
   const { 
     messages: contextMessages,
     isLoading: contextLoading,
@@ -55,9 +62,64 @@ export const ChatPanel = () => {
   const [isResearchMode, setIsResearchMode] = useState(false);
   const [showPICO, setShowPICO] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSessions, setShowSessions] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
+  const sessionDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sessionDropdownRef.current && !sessionDropdownRef.current.contains(event.target as Node)) {
+        setShowSessions(false);
+        setEditingSessionId(null);
+      }
+    };
+    if (showSessions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSessions]);
+
+  const currentSession = sessions.find(s => s.id === currentSessionId);
+
+  const handleCreateNewSession = async () => {
+    await createSession(language === 'fr' ? 'Nouvelle conversation' : 'New chat');
+    setShowSessions(false);
+  };
+
+  const handleSelectSession = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    setShowSessions(false);
+    setEditingSessionId(null);
+  };
+
+  const handleStartRename = (sessionId: string, currentName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSessionId(sessionId);
+    setEditingName(currentName);
+  };
+
+  const handleSaveRename = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (editingName.trim()) {
+      await renameSession(sessionId, editingName.trim());
+    }
+    setEditingSessionId(null);
+  };
+
+  const handleCancelRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSessionId(null);
+  };
+
+  const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await deleteSession(sessionId);
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -185,6 +247,98 @@ export const ChatPanel = () => {
                 <Button variant="ghost" size="icon" onClick={handleClearMessages} className="h-8 w-8">
                   <Trash2 className="h-4 w-4" />
                 </Button>
+              )}
+            </div>
+
+            {/* Chat Sessions Dropdown */}
+            <div className="relative mt-2" ref={sessionDropdownRef}>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowSessions(!showSessions)}
+                className="w-full justify-between text-sm h-9"
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{currentSession?.name || (language === 'fr' ? 'Nouvelle conversation' : 'New chat')}</span>
+                </span>
+                <ChevronDown className={cn("h-3.5 w-3.5 flex-shrink-0 transition-transform", showSessions && "rotate-180")} />
+              </Button>
+              
+              {showSessions && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 overflow-hidden">
+                  <div className="p-2 border-b border-border">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start gap-2 h-8"
+                      onClick={handleCreateNewSession}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {language === 'fr' ? 'Nouvelle conversation' : 'New chat'}
+                    </Button>
+                  </div>
+                  <ScrollArea className="max-h-[200px]">
+                    {sessions.map((session) => (
+                      <div 
+                        key={session.id}
+                        className={cn(
+                          "flex items-center justify-between px-3 py-2 hover:bg-muted cursor-pointer group",
+                          currentSessionId === session.id && "bg-primary/10"
+                        )}
+                        onClick={() => handleSelectSession(session.id)}
+                      >
+                        {editingSessionId === session.id ? (
+                          <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
+                            <Input
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              className="h-6 text-sm flex-1"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveRename(session.id, e as any);
+                                if (e.key === 'Escape') setEditingSessionId(null);
+                              }}
+                            />
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleSaveRename(session.id, e)}>
+                              <Check className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCancelRename}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="truncate text-sm flex-1">{session.name}</span>
+                            <div className="flex items-center gap-1">
+                              {currentSessionId === session.id && (
+                                <Check className="h-3.5 w-3.5 text-primary" />
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                                onClick={(e) => handleStartRename(session.id, session.name, e)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              {sessions.length > 1 && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                                  onClick={(e) => handleDeleteSession(session.id, e)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </ScrollArea>
+                </div>
               )}
             </div>
             

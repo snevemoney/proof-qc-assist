@@ -50,6 +50,16 @@ const ProjectWorkspaceContent = () => {
   const { savedDrafts, isLoading: savedDraftsLoading, saveDraft, deleteDraft } = useSavedDrafts();
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // Reset verification state if history loads empty but hasVerified is true (stale state)
+  useEffect(() => {
+    if (!historyLoading && hasVerified && history.length === 0) {
+      setClaims([]);
+      setInterventions([]);
+      setSummary(null);
+      setHasVerified(false);
+    }
+  }, [historyLoading, hasVerified, history.length, setClaims, setInterventions, setSummary, setHasVerified]);
+
   // Sync project context with chat
   useEffect(() => {
     setProjectContext({ sources, draftText, claims, interventions, summary });
