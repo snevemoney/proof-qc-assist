@@ -77,23 +77,23 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
   const availableActions = actions.filter(a => !a.requiresResults || hasVerificationResults);
   
   return (
-    <div className="p-3 sm:p-4 border-t border-border">
-      <div className="text-xs text-muted-foreground mb-2">
+    <div className="p-2 sm:p-3 border-t border-border">
+      <div className="text-[10px] sm:text-xs text-muted-foreground mb-1.5">
         {language === 'fr' ? 'Actions rapides' : 'Quick actions'}
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
+      <div className="flex gap-1.5 overflow-x-auto pb-1.5 -mx-2 px-2 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
         {availableActions.map((action, index) => (
           <Button
             key={index}
-            variant={action.primary ? 'default' : 'outline'}
+            variant={action.primary ? 'default' : 'ghost'}
             size="sm"
-            className="gap-1.5 sm:gap-2 text-xs whitespace-nowrap flex-shrink-0"
+            className="h-7 gap-1 px-2 text-[11px] sm:text-xs whitespace-nowrap flex-shrink-0"
             onClick={() => onAction(action.message, action.action)}
             disabled={disabled}
           >
             <action.icon className="h-3 w-3" />
-            <span className="hidden xs:inline sm:inline">{action.label}</span>
-            <span className="xs:hidden">{action.label.split(' ')[0]}</span>
+            <span className="hidden sm:inline">{action.label}</span>
+            <span className="sm:hidden">{action.label.split(' ').slice(0, 2).join(' ')}</span>
           </Button>
         ))}
       </div>
