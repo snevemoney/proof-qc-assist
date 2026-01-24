@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Bot, User, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,20 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ChatMessage as ChatMessageType } from '@/hooks/useChatMessages';
 import { ArticleSuggestionCard, type ArticleResult } from './ArticleSuggestionCard';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { MessageTimestamp } from './MessageTimestamp';
+import { EditHistoryNav } from './EditHistoryNav';
 
 interface ChatMessageProps {
-  message: ChatMessageType | { id: string; role: 'user' | 'assistant'; content: string; timestamp?: Date; isStreaming?: boolean };
+  message: ChatMessageType | { 
+    id: string; 
+    role: 'user' | 'assistant'; 
+    content: string; 
+    timestamp?: Date; 
+    isStreaming?: boolean;
+    createdAt?: Date;
+    editCount?: number;
+    parentMessageId?: string | null;
+  };
   onAddArticle?: (article: ArticleResult) => void;
   addedArticleIds?: Set<string>;
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
@@ -72,11 +83,24 @@ export const ChatMessage = ({
   const [isEditing, setIsEditing] = useState(externalEditing);
   const [editContent, setEditContent] = useState(message.content);
   const [isSaving, setIsSaving] = useState(false);
+  const [displayContent, setDisplayContent] = useState(message.content);
+  const [isViewingHistory, setIsViewingHistory] = useState(false);
+
+  // Get timestamp from either createdAt or timestamp field
+  const timestamp = 'createdAt' in message ? message.createdAt : ('timestamp' in message ? message.timestamp : undefined);
+  const editCount = 'editCount' in message ? message.editCount || 0 : 0;
+  const parentMessageId = 'parentMessageId' in message ? message.parentMessageId : null;
   
   // Parse articles from assistant messages
   const { textContent, articles } = isUser 
-    ? { textContent: message.content, articles: [] }
-    : parseArticlesFromContent(message.content);
+    ? { textContent: displayContent, articles: [] }
+    : parseArticlesFromContent(displayContent);
+
+  // Handle content change when navigating history
+  const handleHistoryContentChange = useCallback((content: string, viewingHistory: boolean) => {
+    setDisplayContent(content);
+    setIsViewingHistory(viewingHistory);
+  }, []);
 
   const handleStartEdit = () => {
     setEditContent(message.content);
@@ -129,10 +153,13 @@ export const ChatMessage = ({
       
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <div className="text-sm font-medium">
-            {isUser ? t.you : 'ProofCheck AI'}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              {isUser ? t.you : 'ProofCheck AI'}
+            </span>
+            {timestamp && <MessageTimestamp date={timestamp} />}
           </div>
-          {isUser && onEditMessage && !isEditing && !('isStreaming' in message && message.isStreaming) && (
+          {isUser && onEditMessage && !isEditing && !isViewingHistory && !('isStreaming' in message && message.isStreaming) && (
             <Button
               variant="ghost"
               size="sm"
@@ -178,12 +205,25 @@ export const ChatMessage = ({
             </div>
           </div>
         ) : (
-          <div className="text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none">
-            {isUser ? message.content : textContent}
-            {'isStreaming' in message && message.isStreaming && (
-              <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+          <>
+            <div className="text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none">
+              {isUser ? displayContent : textContent}
+              {'isStreaming' in message && message.isStreaming && (
+                <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+              )}
+            </div>
+            
+            {/* Edit history navigation for user messages */}
+            {isUser && (editCount > 0 || parentMessageId) && (
+              <EditHistoryNav
+                messageId={message.id}
+                currentContent={message.content}
+                editCount={editCount}
+                parentMessageId={parentMessageId}
+                onContentChange={handleHistoryContentChange}
+              />
             )}
-          </div>
+          </>
         )}
         
         {/* Render article suggestions if present */}
