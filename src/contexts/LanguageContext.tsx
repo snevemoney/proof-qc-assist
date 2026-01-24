@@ -148,6 +148,11 @@ const translations = {
     'report.noRequirements': 'No requirements configured',
     'report.estimatedScore': 'Estimated Score',
     'report.improvements': 'Suggested Improvements',
+    
+    // Language mismatch
+    'report.languageMismatch': 'These results were generated in French. Re-verify to see results in English.',
+    'report.reverifyInLanguage': 'Re-verify in English',
+    'report.resultsLanguage': 'Results in',
   },
   fr: {
     // Tabs
@@ -288,6 +293,11 @@ const translations = {
     'report.noRequirements': 'Aucune exigence configurée',
     'report.estimatedScore': 'Score estimé',
     'report.improvements': 'Améliorations suggérées',
+    
+    // Language mismatch
+    'report.languageMismatch': 'Ces résultats ont été générés en anglais. Revérifiez pour voir les résultats en français.',
+    'report.reverifyInLanguage': 'Revérifier en français',
+    'report.resultsLanguage': 'Résultats en',
   },
 };
 

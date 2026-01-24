@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen, ShieldAlert, Shield, ShieldCheck, X } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen, ShieldAlert, Shield, ShieldCheck, X, Languages, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,8 @@ interface ReportTabProps {
   showAuthPrompt?: boolean;
   onDismissAuthPrompt?: () => void;
   onOpenAuthModal?: () => void;
+  verificationLanguage?: 'fr' | 'en' | null;
+  onReverify?: () => void;
 }
 
 const statusConfig: Record<ClaimStatus, { icon: typeof CheckCircle2; colorClass: string; labelEn: string; labelFr: string }> = {
@@ -78,11 +80,16 @@ export const ReportTab = ({
   showAuthPrompt,
   onDismissAuthPrompt,
   onOpenAuthModal,
+  verificationLanguage,
+  onReverify,
 }: ReportTabProps) => {
   const { t, language } = useLanguage();
   const { askAboutClaim, findArticlesForClaim } = useChat();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+
+  // Check for language mismatch
+  const hasLanguageMismatch = hasVerified && verificationLanguage && verificationLanguage !== language;
 
   const handleDeleteClick = (id: string) => {
     setEntryToDelete(id);
@@ -296,6 +303,33 @@ export const ReportTab = ({
                   {language === 'fr' ? 'Se connecter' : 'Sign in'}
                 </Button>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Language Mismatch Warning */}
+      {hasLanguageMismatch && (
+        <Card className="border-warning/50 bg-warning/10">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Languages className="h-5 w-5 text-warning flex-shrink-0" />
+                <p className="text-sm text-foreground">
+                  {t('report.languageMismatch')}
+                </p>
+              </div>
+              {onReverify && (
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  onClick={onReverify}
+                  className="gap-2 whitespace-nowrap"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {t('report.reverifyInLanguage')}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

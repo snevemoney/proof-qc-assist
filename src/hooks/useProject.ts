@@ -25,6 +25,7 @@ export interface ProjectState {
   hasVerified: boolean;
   instructions: string;
   evaluationGrid: EvaluationCriterion[];
+  verificationLanguage: 'fr' | 'en' | null;
 }
 
 const DEMO_SOURCES: Source[] = [
@@ -60,6 +61,7 @@ const DEFAULT_STATE: ProjectState = {
   hasVerified: false,
   instructions: '',
   evaluationGrid: [],
+  verificationLanguage: null,
 };
 
 const STORAGE_KEY = 'proofcheck-project';
@@ -127,12 +129,14 @@ export const useProject = (projectId: string | null = null) => {
             hasVerified: data.has_verified || false,
             instructions: (data as any).instructions || '',
             evaluationGrid: ((data as any).evaluation_grid as unknown as EvaluationCriterion[]) || [],
+            verificationLanguage: ((data as any).verification_language as 'fr' | 'en') || null,
           });
         } else {
           // New project - start with default state (empty for new projects)
           setState({
             ...DEFAULT_STATE,
             sources: [], // Don't include demo sources for new projects
+            verificationLanguage: null,
           });
         }
       } else {
@@ -157,6 +161,7 @@ export const useProject = (projectId: string | null = null) => {
           setState({
             ...DEFAULT_STATE,
             sources: [], // Don't include demo sources for new projects
+            verificationLanguage: null,
           });
         }
       }
@@ -198,6 +203,7 @@ export const useProject = (projectId: string | null = null) => {
             has_verified: newState.hasVerified,
             instructions: newState.instructions,
             evaluation_grid: newState.evaluationGrid as unknown as Json,
+            verification_language: newState.verificationLanguage,
             updated_at: new Date().toISOString(),
           };
 
@@ -423,6 +429,17 @@ export const useProject = (projectId: string | null = null) => {
     [saveProject]
   );
 
+  const setVerificationLanguage = useCallback(
+    (verificationLanguage: 'fr' | 'en' | null) => {
+      setState((prev) => {
+        const newState = { ...prev, verificationLanguage };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
   // Batch update with immediate save (for verification results)
   const updateStateImmediate = useCallback(
     async (updates: Partial<ProjectState>) => {
@@ -452,6 +469,7 @@ export const useProject = (projectId: string | null = null) => {
     setHasVerified,
     setInstructions,
     setEvaluationGrid,
+    setVerificationLanguage,
     updateState,
     updateStateImmediate,
   };

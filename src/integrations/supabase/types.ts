@@ -142,6 +142,7 @@ export type Database = {
           summary: Json | null
           updated_at: string | null
           user_id: string
+          verification_language: string | null
         }
         Insert: {
           active_tab?: string | null
@@ -160,6 +161,7 @@ export type Database = {
           summary?: Json | null
           updated_at?: string | null
           user_id: string
+          verification_language?: string | null
         }
         Update: {
           active_tab?: string | null
@@ -178,6 +180,7 @@ export type Database = {
           summary?: Json | null
           updated_at?: string | null
           user_id?: string
+          verification_language?: string | null
         }
         Relationships: []
       }
@@ -217,6 +220,7 @@ export type Database = {
           id: string
           instructions_snapshot: string | null
           interventions: Json | null
+          language: string | null
           project_id: string | null
           requirement_checks: Json | null
           rubric_scores: Json | null
@@ -233,6 +237,7 @@ export type Database = {
           id?: string
           instructions_snapshot?: string | null
           interventions?: Json | null
+          language?: string | null
           project_id?: string | null
           requirement_checks?: Json | null
           rubric_scores?: Json | null
@@ -249,6 +254,7 @@ export type Database = {
           id?: string
           instructions_snapshot?: string | null
           interventions?: Json | null
+          language?: string | null
           project_id?: string | null
           requirement_checks?: Json | null
           rubric_scores?: Json | null
