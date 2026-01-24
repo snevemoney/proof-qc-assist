@@ -151,7 +151,7 @@ export const DraftTab = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-20 sm:pb-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Label htmlFor="draft-upload" className="cursor-pointer">

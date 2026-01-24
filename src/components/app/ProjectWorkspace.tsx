@@ -23,6 +23,7 @@ const ProjectWorkspaceContent = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { currentProjectId } = useProjectContext();
   const { setProjectContext, setExternalMessages, setOnMessagesChange } = useChat();
   
   const {
@@ -47,7 +48,7 @@ const ProjectWorkspaceContent = () => {
     setStrictMode,
     setHasVerified,
     updateStateImmediate,
-  } = useProject();
+  } = useProject(currentProjectId);
 
   const { history, isLoading: historyLoading, saveToHistory, deleteFromHistory } = useVerificationHistory();
   const { savedDrafts, isLoading: savedDraftsLoading, saveDraft, deleteDraft } = useSavedDrafts();
@@ -57,6 +58,14 @@ const ProjectWorkspaceContent = () => {
   const [isTransitioningToReport, setIsTransitioningToReport] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Reset UI state when project changes
+  useEffect(() => {
+    setVerificationError(null);
+    setRetryCount(0);
+    setIsTransitioningToReport(false);
+    setShowAuthPrompt(false);
+  }, [currentProjectId]);
 
   // Reset stale verification flag for logged-in users when history is empty
   // Skip for anonymous users since they don't have history persistence

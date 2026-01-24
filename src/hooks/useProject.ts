@@ -60,15 +60,27 @@ const DEFAULT_STATE: ProjectState = {
 const STORAGE_KEY = 'proofcheck-project';
 const SAVE_DEBOUNCE_MS = 2000;
 
-export const useProject = () => {
+export const useProject = (projectId: string | null = null) => {
   const { user, isLoading: authLoading } = useAuth();
   const [state, setState] = useState<ProjectState>(DEFAULT_STATE);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
+  const currentProjectIdRef = useRef<string | null>(projectId);
 
-  // Load project on mount or auth change
+  // Track project changes and reset state when project changes
+  useEffect(() => {
+    if (currentProjectIdRef.current !== projectId) {
+      currentProjectIdRef.current = projectId;
+      // Reset to default state when project changes (will be loaded fresh)
+      setState(DEFAULT_STATE);
+      setIsLoading(true);
+      isInitialLoadRef.current = true;
+    }
+  }, [projectId]);
+
+  // Load project on mount or auth/project change
   useEffect(() => {
     if (authLoading) return;
 
@@ -78,11 +90,17 @@ export const useProject = () => {
 
       if (user) {
         // Load from database
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        let query = supabase.from('projects').select('*');
+        
+        if (projectId) {
+          // Load specific project by ID
+          query = query.eq('id', projectId).eq('user_id', user.id);
+        } else {
+          // Fallback: load user's default project (first one)
+          query = query.eq('user_id', user.id);
+        }
+        
+        const { data, error } = await query.maybeSingle();
 
         if (error) {
           console.error('Error loading project:', error);
@@ -104,12 +122,16 @@ export const useProject = () => {
             hasVerified: data.has_verified || false,
           });
         } else {
-          // New user - create project with demo data
-          setState(DEFAULT_STATE);
+          // New project - start with default state (empty for new projects)
+          setState({
+            ...DEFAULT_STATE,
+            sources: [], // Don't include demo sources for new projects
+          });
         }
       } else {
-        // Load from localStorage for anonymous users
-        const stored = localStorage.getItem(STORAGE_KEY);
+        // Load from localStorage for anonymous users (use projectId-specific key if provided)
+        const storageKey = projectId ? `${STORAGE_KEY}-${projectId}` : STORAGE_KEY;
+        const stored = localStorage.getItem(storageKey);
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
@@ -125,7 +147,10 @@ export const useProject = () => {
             setState(DEFAULT_STATE);
           }
         } else {
-          setState(DEFAULT_STATE);
+          setState({
+            ...DEFAULT_STATE,
+            sources: [], // Don't include demo sources for new projects
+          });
         }
       }
 
@@ -137,7 +162,7 @@ export const useProject = () => {
     };
 
     loadProject();
-  }, [user, authLoading]);
+  }, [user, authLoading, projectId]);
 
   // Core save logic (extracted for reuse)
   const performSave = useCallback(
@@ -146,13 +171,6 @@ export const useProject = () => {
 
       try {
         if (user) {
-          // Save to database - check if project exists first
-          const { data: existing } = await supabase
-            .from('projects')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
           const chatMessagesJson = newState.chatMessages.map((msg) => ({
             id: msg.id,
             role: msg.role,
@@ -162,7 +180,6 @@ export const useProject = () => {
           })) as unknown as Json;
 
           const projectData = {
-            user_id: user.id,
             sources: newState.sources as unknown as Json,
             draft_text: newState.draftText,
             claims: newState.claims as unknown as Json,
@@ -176,15 +193,31 @@ export const useProject = () => {
           };
 
           let error;
-          if (existing) {
+          if (projectId) {
+            // Update specific project by ID
             ({ error } = await supabase
               .from('projects')
               .update(projectData)
+              .eq('id', projectId)
               .eq('user_id', user.id));
           } else {
-            ({ error } = await supabase
+            // Fallback: check if user has a project and update/insert
+            const { data: existing } = await supabase
               .from('projects')
-              .insert(projectData));
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (existing) {
+              ({ error } = await supabase
+                .from('projects')
+                .update({ ...projectData, user_id: user.id })
+                .eq('user_id', user.id));
+            } else {
+              ({ error } = await supabase
+                .from('projects')
+                .insert({ ...projectData, user_id: user.id }));
+            }
           }
 
           if (error) {
@@ -193,8 +226,9 @@ export const useProject = () => {
             console.log('Project saved successfully');
           }
         } else {
-          // Save to localStorage for anonymous users
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          // Save to localStorage for anonymous users (use projectId-specific key if provided)
+          const storageKey = projectId ? `${STORAGE_KEY}-${projectId}` : STORAGE_KEY;
+          localStorage.setItem(storageKey, JSON.stringify({
             ...newState,
             chatMessages: newState.chatMessages.map((msg) => ({
               ...msg,
@@ -209,7 +243,7 @@ export const useProject = () => {
         setIsSaving(false);
       }
     },
-    [user]
+    [user, projectId]
   );
 
   // Debounced save
