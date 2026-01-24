@@ -33,11 +33,15 @@ const ProjectWorkspaceContent = () => {
     claims,
     interventions,
     summary,
+    requirementChecks,
+    rubricScores,
     chatMessages,
     activeTab,
     strictMode,
     hasVerified,
     verificationLanguage,
+    instructions,
+    evaluationGrid,
     isLoading,
     isSaving,
     setSources,
@@ -45,6 +49,8 @@ const ProjectWorkspaceContent = () => {
     setClaims,
     setInterventions,
     setSummary,
+    setRequirementChecks,
+    setRubricScores,
     setChatMessages,
     setActiveTab,
     setStrictMode,
@@ -110,6 +116,8 @@ const ProjectWorkspaceContent = () => {
     setClaims(entry.claims);
     setInterventions((entry as any).interventions || []);
     setSummary(entry.summary);
+    setRequirementChecks((entry as any).requirementChecks || []);
+    setRubricScores((entry as any).rubricScores || []);
     setSources(entry.sourcesSnapshot);
     setDraftText(entry.draftText);
     setStrictMode(entry.strictMode);
@@ -137,6 +145,8 @@ const ProjectWorkspaceContent = () => {
         setClaims(mostRecent.claims);
         setInterventions((mostRecent as any).interventions || []);
         setSummary(mostRecent.summary);
+        setRequirementChecks((mostRecent as any).requirementChecks || []);
+        setRubricScores((mostRecent as any).rubricScores || []);
         setSources(mostRecent.sourcesSnapshot);
         setDraftText(mostRecent.draftText);
         setStrictMode(mostRecent.strictMode);
@@ -153,6 +163,8 @@ const ProjectWorkspaceContent = () => {
         setClaims([]);
         setInterventions([]);
         setSummary(null);
+        setRequirementChecks([]);
+        setRubricScores([]);
         setHasVerified(false);
         
         toast({
@@ -204,6 +216,8 @@ const ProjectWorkspaceContent = () => {
         claims: result.claims,
         interventions: result.interventions || [],
         summary: result.summary,
+        requirementChecks: result.requirementChecks || [],
+        rubricScores: result.rubricScores || [],
         hasVerified: true,
         verificationLanguage: language,
       });
@@ -234,6 +248,8 @@ const ProjectWorkspaceContent = () => {
         claims: result.claims,
         interventions: result.interventions || [],
         summary: result.summary,
+        requirementChecks: result.requirementChecks || [],
+        rubricScores: result.rubricScores || [],
         draftText,
         sourcesSnapshot: sources,
         strictMode,
@@ -362,6 +378,10 @@ const ProjectWorkspaceContent = () => {
               claims={claims}
               interventions={interventions}
               summary={summary}
+              requirementChecks={requirementChecks}
+              rubricScores={rubricScores}
+              instructions={instructions}
+              evaluationGrid={evaluationGrid}
               sourcesCount={sources.length}
               draftLength={draftText.length}
               history={history}

@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen, ShieldAlert, Shield, ShieldCheck, X, Languages, RefreshCw } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen, ShieldAlert, Shield, ShieldCheck, X, Languages, RefreshCw, ClipboardCheck, LayoutGrid, Lightbulb, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useChat } from '@/contexts/ChatContext';
-import type { Claim, Intervention, VerificationSummary, InterventionSeverity } from '@/lib/verification';
+import type { Claim, Intervention, VerificationSummary, InterventionSeverity, RequirementCheck, RubricScore } from '@/lib/verification';
 import type { VerificationHistoryEntry } from '@/hooks/useVerificationHistory';
+import type { EvaluationCriterion } from '@/lib/evaluationTemplates';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
@@ -30,6 +32,10 @@ interface ReportTabProps {
   claims: Claim[];
   interventions: Intervention[];
   summary: VerificationSummary | null;
+  requirementChecks: RequirementCheck[];
+  rubricScores: RubricScore[];
+  instructions: string;
+  evaluationGrid: EvaluationCriterion[];
   sourcesCount: number;
   draftLength: number;
   history: VerificationHistoryEntry[];
@@ -71,6 +77,10 @@ export const ReportTab = ({
   claims,
   interventions,
   summary,
+  requirementChecks,
+  rubricScores,
+  instructions,
+  evaluationGrid,
   sourcesCount,
   draftLength,
   history,
@@ -403,6 +413,145 @@ export const ReportTab = ({
           {t('report.copyMarkdown')}
         </Button>
       </div>
+
+      {/* Requirements Compliance Section */}
+      {instructions && requirementChecks.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-primary" />
+              {t('report.requirementsCompliance')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {requirementChecks.map((check, index) => {
+              const statusConfig = {
+                met: { icon: CheckCircle2, colorClass: 'text-success', bgClass: 'bg-success/10 border-success/30' },
+                partial: { icon: AlertTriangle, colorClass: 'text-warning', bgClass: 'bg-warning/10 border-warning/30' },
+                not_met: { icon: XCircle, colorClass: 'text-destructive', bgClass: 'bg-destructive/10 border-destructive/30' },
+                unable_to_verify: { icon: HelpCircle, colorClass: 'text-muted-foreground', bgClass: 'bg-muted border-muted-foreground/30' },
+              };
+              const config = statusConfig[check.status] || statusConfig.unable_to_verify;
+              const StatusIcon = config.icon;
+              const statusLabel = t(`report.requirement${check.status === 'met' ? 'Met' : check.status === 'partial' ? 'Partial' : check.status === 'not_met' ? 'NotMet' : 'Unable'}`);
+              
+              return (
+                <div key={check.id || index} className={`border rounded-lg p-3 ${config.bgClass}`}>
+                  <div className="flex items-start gap-3">
+                    <StatusIcon className={`h-5 w-5 mt-0.5 flex-shrink-0 ${config.colorClass}`} />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={`text-xs ${config.colorClass}`}>
+                          {statusLabel}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-foreground">{check.instruction}</p>
+                      {check.evidence && (
+                        <p className="text-xs text-muted-foreground bg-background/50 p-2 rounded italic">
+                          "{check.evidence}"
+                        </p>
+                      )}
+                      {check.suggestion && (
+                        <p className="text-xs text-primary flex items-start gap-1">
+                          <Lightbulb className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                          {check.suggestion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rubric Preview Section */}
+      {evaluationGrid.length > 0 && rubricScores.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-accent-foreground" />
+                {t('report.rubricPreview')}
+              </CardTitle>
+              {/* Overall Score */}
+              {(() => {
+                const totalWeight = evaluationGrid.reduce((sum, c) => sum + c.weight, 0);
+                const weightedSum = rubricScores.reduce((sum, score) => {
+                  const criterion = evaluationGrid.find(c => c.id === score.criterionId);
+                  if (criterion) {
+                    return sum + (score.estimatedScore * criterion.weight / 100);
+                  }
+                  return sum;
+                }, 0);
+                const overallScore = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) : 0;
+                const scoreColor = overallScore >= 80 ? 'text-success' : overallScore >= 60 ? 'text-warning' : 'text-destructive';
+                
+                return (
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className={`h-5 w-5 ${scoreColor}`} />
+                    <span className={`text-2xl font-bold ${scoreColor}`}>{overallScore}%</span>
+                    <span className="text-xs text-muted-foreground">{t('report.estimatedScore')}</span>
+                  </div>
+                );
+              })()}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {rubricScores.map((score, index) => {
+              const criterion = evaluationGrid.find(c => c.id === score.criterionId);
+              if (!criterion) return null;
+              
+              const criterionName = language === 'fr' ? criterion.nameFr : criterion.name;
+              const scorePercent = score.estimatedScore;
+              const progressColor = scorePercent >= 80 ? 'bg-success' : scorePercent >= 60 ? 'bg-warning' : 'bg-destructive';
+              
+              return (
+                <div key={score.criterionId || index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{criterionName}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {criterion.weight}%
+                      </Badge>
+                      {criterion.isRequired && (
+                        <Badge variant="secondary" className="text-xs">
+                          {t('requirements.required')}
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold">{scorePercent}/100</span>
+                  </div>
+                  <div className="relative">
+                    <Progress value={scorePercent} className="h-2" />
+                    <div 
+                      className={`absolute top-0 left-0 h-2 rounded-full ${progressColor}`} 
+                      style={{ width: `${scorePercent}%` }} 
+                    />
+                  </div>
+                  {score.feedback && (
+                    <p className="text-xs text-muted-foreground">{score.feedback}</p>
+                  )}
+                  {score.improvements && score.improvements.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs font-medium text-primary flex items-center gap-1">
+                        <Lightbulb className="h-3 w-3" />
+                        {t('report.improvements')}:
+                      </p>
+                      <ul className="list-disc list-inside text-xs text-muted-foreground pl-4">
+                        {score.improvements.map((improvement, i) => (
+                          <li key={i}>{improvement}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Interventions Section */}
       {interventions.length > 0 && (

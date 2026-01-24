@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Source, Claim, Intervention, VerificationSummary } from '@/lib/verification';
+import { Source, Claim, Intervention, VerificationSummary, RequirementCheck, RubricScore } from '@/lib/verification';
 import type { Json } from '@/integrations/supabase/types';
 import { EvaluationCriterion } from '@/lib/evaluationTemplates';
 
@@ -19,6 +19,8 @@ export interface ProjectState {
   claims: Claim[];
   interventions: Intervention[];
   summary: VerificationSummary | null;
+  requirementChecks: RequirementCheck[];
+  rubricScores: RubricScore[];
   chatMessages: ChatMessage[];
   activeTab: string;
   strictMode: boolean;
@@ -55,6 +57,8 @@ const DEFAULT_STATE: ProjectState = {
   claims: [],
   interventions: [],
   summary: null,
+  requirementChecks: [],
+  rubricScores: [],
   chatMessages: [],
   activeTab: 'sources',
   strictMode: false,
@@ -120,6 +124,8 @@ export const useProject = (projectId: string | null = null) => {
             claims: (data.claims as unknown as Claim[]) || [],
             interventions: ((data as any).interventions as unknown as Intervention[]) || [],
             summary: data.summary as unknown as VerificationSummary | null,
+            requirementChecks: ((data as any).requirement_checks as unknown as RequirementCheck[]) || [],
+            rubricScores: ((data as any).rubric_scores as unknown as RubricScore[]) || [],
             chatMessages: ((data.chat_messages as unknown as ChatMessage[]) || []).map((msg) => ({
               ...msg,
               timestamp: new Date(msg.timestamp),
@@ -197,6 +203,8 @@ export const useProject = (projectId: string | null = null) => {
             claims: newState.claims as unknown as Json,
             interventions: newState.interventions as unknown as Json,
             summary: newState.summary as unknown as Json,
+            requirement_checks: newState.requirementChecks as unknown as Json,
+            rubric_scores: newState.rubricScores as unknown as Json,
             chat_messages: chatMessagesJson,
             active_tab: newState.activeTab,
             strict_mode: newState.strictMode,
@@ -440,6 +448,28 @@ export const useProject = (projectId: string | null = null) => {
     [saveProject]
   );
 
+  const setRequirementChecks = useCallback(
+    (requirementChecks: RequirementCheck[]) => {
+      setState((prev) => {
+        const newState = { ...prev, requirementChecks };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
+  const setRubricScores = useCallback(
+    (rubricScores: RubricScore[]) => {
+      setState((prev) => {
+        const newState = { ...prev, rubricScores };
+        saveProject(newState);
+        return newState;
+      });
+    },
+    [saveProject]
+  );
+
   // Batch update with immediate save (for verification results)
   const updateStateImmediate = useCallback(
     async (updates: Partial<ProjectState>) => {
@@ -463,6 +493,8 @@ export const useProject = (projectId: string | null = null) => {
     setClaims,
     setInterventions,
     setSummary,
+    setRequirementChecks,
+    setRubricScores,
     setChatMessages,
     setActiveTab,
     setStrictMode,
