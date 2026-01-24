@@ -43,6 +43,8 @@ const ProjectWorkspaceContent = () => {
     verificationLanguage,
     instructions,
     evaluationGrid,
+    finalDraft,
+    finalDraftVersions,
     isLoading,
     isSaving,
     setSources,
@@ -57,6 +59,8 @@ const ProjectWorkspaceContent = () => {
     setStrictMode,
     setHasVerified,
     setVerificationLanguage,
+    setFinalDraft,
+    setFinalDraftVersions,
     updateStateImmediate,
   } = useProject(currentProjectId);
 
@@ -419,6 +423,10 @@ const ProjectWorkspaceContent = () => {
               sources={sources}
               hasVerified={hasVerified}
               language={language}
+              finalDraft={finalDraft}
+              setFinalDraft={setFinalDraft}
+              finalDraftVersions={finalDraftVersions}
+              setFinalDraftVersions={setFinalDraftVersions}
             />
           </TabsContent>
         </div>

@@ -14,6 +14,8 @@ import { Claim, Intervention, Source } from '@/lib/verification';
 import { toast } from 'sonner';
 import { SelectionFeedbackPopover } from './SelectionFeedbackPopover';
 import { DiffView } from './DiffView';
+import { DraftVersion } from '@/hooks/useFinalDraft';
+
 interface FinalDraftTabProps {
   draftText: string;
   claims: Claim[];
@@ -21,6 +23,10 @@ interface FinalDraftTabProps {
   sources: Source[];
   hasVerified: boolean;
   language: 'fr' | 'en';
+  finalDraft: string;
+  setFinalDraft: (text: string) => void;
+  finalDraftVersions: DraftVersion[];
+  setFinalDraftVersions: (versions: DraftVersion[]) => void;
 }
 
 export const FinalDraftTab = ({ 
@@ -29,7 +35,11 @@ export const FinalDraftTab = ({
   interventions, 
   sources, 
   hasVerified,
-  language 
+  language,
+  finalDraft: externalFinalDraft,
+  setFinalDraft: externalSetFinalDraft,
+  finalDraftVersions,
+  setFinalDraftVersions,
 }: FinalDraftTabProps) => {
   const { user } = useAuth();
   const { 
@@ -50,7 +60,12 @@ export const FinalDraftTab = ({
     currentVersionIndex,
     goToPreviousVersion,
     goToNextVersion
-  } = useFinalDraft();
+  } = useFinalDraft({
+    finalDraft: externalFinalDraft,
+    setFinalDraft: externalSetFinalDraft,
+    versions: finalDraftVersions,
+    setVersions: setFinalDraftVersions,
+  });
   const [viewMode, setViewMode] = useState<'final' | 'compare'>('final');
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState('');
