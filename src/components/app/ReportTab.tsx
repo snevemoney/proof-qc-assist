@@ -499,33 +499,38 @@ export const ReportTab = ({
       {renderHistorySection()}
 
       {/* Delete Confirmation Dialog */}
-      {deleteConfirmOpen && (
-        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {language === 'fr' ? 'Supprimer cette entrée?' : 'Delete this entry?'}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {language === 'fr'
-                  ? 'Cette action est irréversible.'
-                  : 'This action cannot be undone.'}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>
-                {language === 'fr' ? 'Annuler' : 'Cancel'}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {language === 'fr' ? 'Supprimer' : 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      {/* Always mounted to avoid Radix portal race conditions on tab switches */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) setEntryToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'fr' ? 'Supprimer cette entrée?' : 'Delete this entry?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'fr'
+                ? 'Cette action est irréversible.'
+                : 'This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {language === 'fr' ? 'Annuler' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {language === 'fr' ? 'Supprimer' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
