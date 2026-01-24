@@ -79,8 +79,8 @@ For each intervention, evaluate:
 
 STRICT MODE: When strict mode is enabled, require explicit citations and direct quotes. Without strict mode, allow reasonable paraphrasing.
 
-TEACHER REQUIREMENTS VERIFICATION:
-When teacher instructions are provided, verify each requirement separately. Categorize each as:
+ASSIGNMENT REQUIREMENTS VERIFICATION:
+When assignment instructions are provided, verify each requirement separately. Categorize each as:
 - "met": The requirement is fully satisfied in the draft
 - "partial": The requirement is partially met but missing some elements
 - "not_met": The requirement is not addressed in the draft
@@ -141,8 +141,8 @@ Pour chaque intervention, évaluez:
 
 MODE STRICT: Lorsque le mode strict est activé, exigez des citations explicites et des citations directes. Sans mode strict, autorisez une paraphrase raisonnable.
 
-VÉRIFICATION DES EXIGENCES DU PROFESSEUR:
-Lorsque des consignes du professeur sont fournies, vérifiez chaque exigence séparément. Catégorisez chacune comme:
+VÉRIFICATION DES EXIGENCES DU TRAVAIL:
+Lorsque des consignes du travail sont fournies, vérifiez chaque exigence séparément. Catégorisez chacune comme:
 - "met": L'exigence est pleinement satisfaite dans le brouillon
 - "partial": L'exigence est partiellement respectée mais manque certains éléments
 - "not_met": L'exigence n'est pas abordée dans le brouillon
@@ -192,11 +192,11 @@ Content: ${source.content || 'No content extracted yet'}
 ---`;
     }).join("\n\n");
 
-    // Format teacher instructions if provided
+    // Format assignment instructions if provided
     let instructionsSection = '';
     if (instructions && instructions.trim()) {
       instructionsSection = `
-${language === 'fr' ? 'CONSIGNES DU PROFESSEUR À VÉRIFIER' : 'TEACHER INSTRUCTIONS TO VERIFY'}:
+${language === 'fr' ? 'CONSIGNES DU TRAVAIL À VÉRIFIER' : 'ASSIGNMENT INSTRUCTIONS TO VERIFY'}:
 ${instructions}
 `;
     }
@@ -211,7 +211,7 @@ ${instructions}
       }).join('\n');
       
       evaluationGridSection = `
-${language === 'fr' ? 'GRILLE D\'ÉVALUATION DU PROFESSEUR' : 'TEACHER EVALUATION GRID'}:
+${language === 'fr' ? 'GRILLE D\'ÉVALUATION DU TRAVAIL' : 'ASSIGNMENT EVALUATION GRID'}:
 ${criteriaList}
 `;
     }
@@ -224,7 +224,7 @@ ${instructionsSection}${evaluationGridSection}
 ${language === 'fr' ? 'BROUILLON DE L\'ÉTUDIANT À VÉRIFIER' : 'STUDENT DRAFT TO VERIFY'}:
 ${draftText}
 
-${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}${instructions ? (language === 'fr' ? ' Aussi, vérifiez chaque exigence du professeur.' : ' Also, verify each teacher requirement.') : ''}${evaluationGrid && evaluationGrid.length > 0 ? (language === 'fr' ? ' Enfin, estimez le score pour chaque critère de la grille d\'évaluation.' : ' Finally, estimate the score for each evaluation criterion.') : ''}`;
+${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}${instructions ? (language === 'fr' ? ' Aussi, vérifiez chaque exigence du travail.' : ' Also, verify each assignment requirement.') : ''}${evaluationGrid && evaluationGrid.length > 0 ? (language === 'fr' ? ' Enfin, estimez le score pour chaque critère de la grille d\'évaluation.' : ' Finally, estimate the score for each evaluation criterion.') : ''}`;
 
     // Create AbortController for timeout (90 seconds for complex drafts)
     const controller = new AbortController();
@@ -376,7 +376,7 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                     },
                     requirementChecks: {
                       type: "array",
-                      description: language === 'fr' ? "Vérification des exigences du professeur" : "Teacher requirement verification",
+                      description: language === 'fr' ? "Vérification des exigences du travail" : "Assignment requirement verification",
                       items: {
                         type: "object",
                         properties: {

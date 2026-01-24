@@ -112,11 +112,11 @@ const translations = {
     
     // Requirements
     'tabs.requirements': 'Requirements',
-    'requirements.instructions': 'Teacher Instructions',
+    'requirements.instructions': 'Assignment Instructions',
     'requirements.instructionsDesc': 'Paste or type your assignment-specific instructions. The AI will verify your draft against these requirements.',
     'requirements.instructionsPlaceholder': 'Ex: The care plan must include at least 3 priority nursing diagnoses, each with evidence-based interventions...',
     'requirements.evaluationGrid': 'Evaluation Grid',
-    'requirements.evaluationGridDesc': 'Define your teacher\'s evaluation criteria. The AI will estimate your score for each criterion.',
+    'requirements.evaluationGridDesc': 'Define the evaluation criteria for your assignment. The AI will estimate your score for each criterion.',
     'requirements.selectTemplate': 'Start with a template',
     'requirements.selectTemplatePlaceholder': 'Select a template...',
     'requirements.customGrid': '✏️ Custom grid',
@@ -257,11 +257,11 @@ const translations = {
     
     // Requirements
     'tabs.requirements': 'Exigences',
-    'requirements.instructions': 'Consignes du professeur',
+    'requirements.instructions': 'Consignes du travail',
     'requirements.instructionsDesc': 'Collez ou tapez les consignes spécifiques de votre travail. L\'IA vérifiera votre brouillon par rapport à ces exigences.',
     'requirements.instructionsPlaceholder': 'Ex: Le plan de soins doit inclure au moins 3 diagnostics infirmiers prioritaires, chacun avec des interventions fondées sur des données probantes...',
     'requirements.evaluationGrid': 'Grille d\'évaluation',
-    'requirements.evaluationGridDesc': 'Définissez les critères d\'évaluation de votre professeur. L\'IA estimera votre score pour chaque critère.',
+    'requirements.evaluationGridDesc': 'Définissez les critères d\'évaluation de votre travail. L\'IA estimera votre score pour chaque critère.',
     'requirements.selectTemplate': 'Commencer avec un modèle',
     'requirements.selectTemplatePlaceholder': 'Sélectionner un modèle...',
     'requirements.customGrid': '✏️ Grille personnalisée',
