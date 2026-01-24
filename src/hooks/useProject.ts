@@ -6,14 +6,6 @@ import type { Json } from '@/integrations/supabase/types';
 import { EvaluationCriterion } from '@/lib/evaluationTemplates';
 import { DraftVersion } from '@/hooks/useFinalDraft';
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  isStreaming?: boolean;
-}
-
 export interface ProjectState {
   sources: Source[];
   draftText: string;
@@ -22,7 +14,6 @@ export interface ProjectState {
   summary: VerificationSummary | null;
   requirementChecks: RequirementCheck[];
   rubricScores: RubricScore[];
-  chatMessages: ChatMessage[];
   activeTab: string;
   strictMode: boolean;
   hasVerified: boolean;
@@ -62,7 +53,6 @@ const DEFAULT_STATE: ProjectState = {
   summary: null,
   requirementChecks: [],
   rubricScores: [],
-  chatMessages: [],
   activeTab: 'sources',
   strictMode: false,
   hasVerified: false,
@@ -131,10 +121,6 @@ export const useProject = (projectId: string | null = null) => {
             summary: data.summary as unknown as VerificationSummary | null,
             requirementChecks: ((data as any).requirement_checks as unknown as RequirementCheck[]) || [],
             rubricScores: ((data as any).rubric_scores as unknown as RubricScore[]) || [],
-            chatMessages: ((data.chat_messages as unknown as ChatMessage[]) || []).map((msg) => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp),
-            })),
             activeTab: data.active_tab || 'sources',
             strictMode: data.strict_mode || false,
             hasVerified: data.has_verified || false,
@@ -164,9 +150,9 @@ export const useProject = (projectId: string | null = null) => {
             const parsed = JSON.parse(stored);
             setState({
               ...parsed,
-              chatMessages: (parsed.chatMessages || []).map((msg: ChatMessage) => ({
-                ...msg,
-                timestamp: new Date(msg.timestamp),
+              finalDraftVersions: (parsed.finalDraftVersions || []).map((v: DraftVersion) => ({
+                ...v,
+                timestamp: new Date(v.timestamp),
               })),
             });
           } catch (e) {
@@ -199,14 +185,6 @@ export const useProject = (projectId: string | null = null) => {
 
       try {
         if (user) {
-          const chatMessagesJson = newState.chatMessages.map((msg) => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp.toISOString(),
-            isStreaming: msg.isStreaming,
-          })) as unknown as Json;
-
           const projectData = {
             sources: newState.sources as unknown as Json,
             draft_text: newState.draftText,
@@ -215,7 +193,6 @@ export const useProject = (projectId: string | null = null) => {
             summary: newState.summary as unknown as Json,
             requirement_checks: newState.requirementChecks as unknown as Json,
             rubric_scores: newState.rubricScores as unknown as Json,
-            chat_messages: chatMessagesJson,
             active_tab: newState.activeTab,
             strict_mode: newState.strictMode,
             has_verified: newState.hasVerified,
@@ -268,9 +245,9 @@ export const useProject = (projectId: string | null = null) => {
           const storageKey = projectId ? `${STORAGE_KEY}-${projectId}` : STORAGE_KEY;
           localStorage.setItem(storageKey, JSON.stringify({
             ...newState,
-            chatMessages: newState.chatMessages.map((msg) => ({
-              ...msg,
-              timestamp: msg.timestamp.toISOString(),
+            finalDraftVersions: newState.finalDraftVersions.map((v) => ({
+              ...v,
+              timestamp: v.timestamp.toISOString(),
             })),
           }));
           console.log('Project saved to localStorage');
@@ -378,18 +355,6 @@ export const useProject = (projectId: string | null = null) => {
     (summary: VerificationSummary | null) => {
       setState((prev) => {
         const newState = { ...prev, summary };
-        saveProject(newState);
-        return newState;
-      });
-    },
-    [saveProject]
-  );
-
-  const setChatMessages = useCallback(
-    (messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
-      setState((prev) => {
-        const newMessages = typeof messages === 'function' ? messages(prev.chatMessages) : messages;
-        const newState = { ...prev, chatMessages: newMessages };
         saveProject(newState);
         return newState;
       });
@@ -532,7 +497,6 @@ export const useProject = (projectId: string | null = null) => {
     setSummary,
     setRequirementChecks,
     setRubricScores,
-    setChatMessages,
     setActiveTab,
     setStrictMode,
     setHasVerified,

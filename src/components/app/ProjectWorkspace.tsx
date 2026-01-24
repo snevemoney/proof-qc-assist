@@ -26,7 +26,7 @@ const ProjectWorkspaceContent = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { currentProjectId } = useProjectContext();
-  const { setProjectContext, setExternalMessages, setOnMessagesChange } = useChat();
+  const { setProjectContext } = useChat();
   
   const {
     sources,
@@ -36,7 +36,6 @@ const ProjectWorkspaceContent = () => {
     summary,
     requirementChecks,
     rubricScores,
-    chatMessages,
     activeTab,
     strictMode,
     hasVerified,
@@ -54,7 +53,6 @@ const ProjectWorkspaceContent = () => {
     setSummary,
     setRequirementChecks,
     setRubricScores,
-    setChatMessages,
     setActiveTab,
     setStrictMode,
     setHasVerified,
@@ -64,7 +62,7 @@ const ProjectWorkspaceContent = () => {
     updateStateImmediate,
   } = useProject(currentProjectId);
 
-  const { history, isLoading: historyLoading, saveToHistory, deleteFromHistory } = useVerificationHistory();
+  const { history, isLoading: historyLoading, saveToHistory, deleteFromHistory } = useVerificationHistory(currentProjectId);
   const { savedDrafts, isLoading: savedDraftsLoading, saveDraft, deleteDraft } = useSavedDrafts();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<VerificationError | null>(null);
@@ -103,20 +101,6 @@ const ProjectWorkspaceContent = () => {
       rubricScores,
     });
   }, [sources, draftText, claims, interventions, summary, instructions, evaluationGrid, requirementChecks, rubricScores, setProjectContext]);
-
-  // Load chat messages from project
-  useEffect(() => {
-    if (chatMessages.length > 0) {
-      setExternalMessages(chatMessages);
-    }
-  }, [chatMessages, setExternalMessages]);
-
-  // Save chat messages when they change
-  useEffect(() => {
-    setOnMessagesChange((messages) => {
-      setChatMessages(messages);
-    });
-  }, [setOnMessagesChange, setChatMessages]);
 
   const handleAddSources = (newSources: Source[]) => {
     setSources(prev => [...prev, ...newSources]);

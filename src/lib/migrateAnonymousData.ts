@@ -42,6 +42,7 @@ const LOCAL_PROJECT_PREFIX = 'proofcheck-project-';
 const LOCAL_SESSIONS_PREFIX = 'proofcheck-chat-sessions-';
 const LOCAL_MESSAGES_PREFIX = 'proofcheck-chat-messages-';
 const LOCAL_VERIFICATION_PREFIX = 'proofcheck-verification-history-';
+const LOCAL_SAVED_DRAFTS_KEY = 'proofcheck-saved-drafts';
 
 /**
  * Migrates all anonymous user data from localStorage to Supabase
@@ -212,7 +213,31 @@ export async function migrateAnonymousData(userId: string): Promise<boolean> {
       }
     }
 
-    // Step 5: Clear all migrated localStorage data
+    // Step 5: Migrate saved drafts (global, not per-project)
+    const savedDraftsJson = localStorage.getItem(LOCAL_SAVED_DRAFTS_KEY);
+    if (savedDraftsJson) {
+      try {
+        const localDrafts = JSON.parse(savedDraftsJson);
+        if (Array.isArray(localDrafts) && localDrafts.length > 0) {
+          for (const draft of localDrafts) {
+            await supabase
+              .from('saved_drafts')
+              .insert({
+                user_id: userId,
+                name: draft.name || 'Untitled Draft',
+                content: draft.content || '',
+                created_at: draft.createdAt || new Date().toISOString(),
+                updated_at: draft.updatedAt || new Date().toISOString(),
+              });
+          }
+          console.log(`Migrated ${localDrafts.length} saved drafts`);
+        }
+      } catch (e) {
+        console.error('Error migrating saved drafts:', e);
+      }
+    }
+
+    // Step 6: Clear all migrated localStorage data
     clearAnonymousData(localProjects);
 
     console.log('Migration complete!');
@@ -246,6 +271,9 @@ function clearAnonymousData(localProjects: LocalProject[]) {
     localStorage.removeItem(`${LOCAL_SESSIONS_PREFIX}${project.id}`);
     localStorage.removeItem(`${LOCAL_VERIFICATION_PREFIX}${project.id}`);
   }
+
+  // Clear global saved drafts
+  localStorage.removeItem(LOCAL_SAVED_DRAFTS_KEY);
 
   console.log('Cleared anonymous data from localStorage');
 }
