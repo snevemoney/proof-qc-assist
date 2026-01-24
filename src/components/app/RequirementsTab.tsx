@@ -83,7 +83,7 @@ export const RequirementsTab: React.FC = () => {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5 text-primary" />
-            {language === 'fr' ? 'Consignes du professeur' : 'Teacher Instructions'}
+            {language === 'fr' ? 'Consignes du travail' : 'Assignment Instructions'}
           </CardTitle>
           <CardDescription>
             {language === 'fr'
@@ -120,8 +120,8 @@ export const RequirementsTab: React.FC = () => {
           </CardTitle>
           <CardDescription>
             {language === 'fr'
-              ? 'Définissez les critères d\'évaluation de votre professeur. L\'IA estimera votre score pour chaque critère.'
-              : 'Define your teacher\'s evaluation criteria. The AI will estimate your score for each criterion.'}
+              ? 'Définissez les critères d\'évaluation de votre travail. L\'IA estimera votre score pour chaque critère.'
+              : 'Define the evaluation criteria for your assignment. The AI will estimate your score for each criterion.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -248,7 +248,7 @@ export const RequirementsTab: React.FC = () => {
                           onChange={(e) =>
                             handleUpdateCriterion(criterion.id, { description: e.target.value })
                           }
-                          placeholder="What the teacher expects for this criterion..."
+                          placeholder="What is expected for this criterion..."
                           className="min-h-[80px]"
                         />
                       </div>
@@ -261,7 +261,7 @@ export const RequirementsTab: React.FC = () => {
                           onChange={(e) =>
                             handleUpdateCriterion(criterion.id, { descriptionFr: e.target.value })
                           }
-                          placeholder="Ce que le professeur attend pour ce critère..."
+                          placeholder="Ce qui est attendu pour ce critère..."
                           className="min-h-[80px]"
                         />
                       </div>
