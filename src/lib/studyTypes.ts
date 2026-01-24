@@ -81,3 +81,97 @@ export function getStudyTypeBadgeColor(studyType: string | undefined): string {
   // Default (gray)
   return 'bg-muted text-muted-foreground';
 }
+
+// Evidence Pyramid Levels (I-VII) based on nursing/medical research hierarchy
+export interface EvidenceLevel {
+  level: number;
+  label: string;
+  labelFr: string;
+  color: string;
+}
+
+export function getEvidenceLevel(studyType: string | undefined): EvidenceLevel {
+  if (!studyType) {
+    return { level: 7, label: 'Level VII', labelFr: 'Niveau VII', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' };
+  }
+  
+  const lowerType = studyType.toLowerCase();
+  
+  // Level I: Systematic Reviews & Meta-analyses
+  if (lowerType.includes('systematic review') || lowerType.includes('meta-analysis') || 
+      lowerType.includes('méta') || lowerType.includes('revue systématique') ||
+      lowerType.includes('umbrella review') || lowerType.includes('revue parapluie')) {
+    return { 
+      level: 1, 
+      label: 'Level I', 
+      labelFr: 'Niveau I', 
+      color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' 
+    };
+  }
+  
+  // Level II: Randomized Controlled Trials
+  if (lowerType.includes('randomized') || lowerType.includes('rct') || lowerType.includes('ecr') ||
+      lowerType.includes('experimental study') || lowerType.includes('étude expérimentale')) {
+    return { 
+      level: 2, 
+      label: 'Level II', 
+      labelFr: 'Niveau II', 
+      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' 
+    };
+  }
+  
+  // Level III: Quasi-experimental, Cohort studies
+  if (lowerType.includes('quasi-experimental') || lowerType.includes('cohort') || 
+      lowerType.includes('cohorte') || lowerType.includes('prospective') ||
+      lowerType.includes('longitudinal')) {
+    return { 
+      level: 3, 
+      label: 'Level III', 
+      labelFr: 'Niveau III', 
+      color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300' 
+    };
+  }
+  
+  // Level IV: Case-control, Cross-sectional
+  if (lowerType.includes('case-control') || lowerType.includes('cas-témoins') ||
+      lowerType.includes('cross-sectional') || lowerType.includes('transversale') ||
+      lowerType.includes('retrospective') || lowerType.includes('rétrospective')) {
+    return { 
+      level: 4, 
+      label: 'Level IV', 
+      labelFr: 'Niveau IV', 
+      color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' 
+    };
+  }
+  
+  // Level V: Systematic reviews of qualitative/descriptive
+  if (lowerType.includes('scoping review') || lowerType.includes('literature review') ||
+      lowerType.includes('revue exploratoire') || lowerType.includes('revue de littérature')) {
+    return { 
+      level: 5, 
+      label: 'Level V', 
+      labelFr: 'Niveau V', 
+      color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' 
+    };
+  }
+  
+  // Level VI: Qualitative, Case studies, Descriptive
+  if (lowerType.includes('qualitative') || lowerType.includes('case study') || 
+      lowerType.includes('étude de cas') || lowerType.includes('case series') ||
+      lowerType.includes('descriptive') || lowerType.includes('survey') || lowerType.includes('enquête')) {
+    return { 
+      level: 6, 
+      label: 'Level VI', 
+      labelFr: 'Niveau VI', 
+      color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' 
+    };
+  }
+  
+  // Level VII: Expert opinion, Guidelines, Reports
+  return { 
+    level: 7, 
+    label: 'Level VII', 
+    labelFr: 'Niveau VII', 
+    color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' 
+  };
+}

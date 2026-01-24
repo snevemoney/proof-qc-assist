@@ -1,4 +1,4 @@
-import { Lightbulb, Search, BookOpen, PenTool, GraduationCap } from 'lucide-react';
+import { Lightbulb, Search, BookOpen, PenTool, GraduationCap, HeartPulse, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -19,6 +19,24 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
       action: 'find-sources' as const,
       requiresResults: false,
       primary: true,
+    },
+    {
+      icon: HeartPulse,
+      label: language === 'fr' ? 'Vérifier plan de soins' : 'Care Plan Check',
+      message: language === 'fr'
+        ? 'Vérifie mon plan de soins infirmiers. Les interventions sont-elles fondées sur des preuves? Identifie les lacunes dans les justifications cliniques.'
+        : 'Check my nursing care plan. Are the interventions evidence-based? Identify gaps in clinical rationales.',
+      action: 'chat' as const,
+      requiresResults: false,
+    },
+    {
+      icon: Stethoscope,
+      label: language === 'fr' ? 'Question clinique' : 'Clinical Question',
+      message: language === 'fr'
+        ? 'Aide-moi à formuler une question clinique PICO basée sur mon brouillon. Quel est le problème de santé, l\'intervention proposée et les résultats attendus?'
+        : 'Help me formulate a PICO clinical question based on my draft. What is the health problem, proposed intervention, and expected outcomes?',
+      action: 'chat' as const,
+      requiresResults: false,
     },
     {
       icon: Lightbulb,

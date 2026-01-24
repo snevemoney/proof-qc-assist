@@ -3,9 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getStudyTypeBadgeColor } from '@/lib/studyTypes';
+import { getStudyTypeBadgeColor, getEvidenceLevel } from '@/lib/studyTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export interface ArticleResult {
   id: string;
@@ -54,11 +60,30 @@ export const ArticleSuggestionCard = ({
   
   const studyTypeLabel = language === 'fr' ? article.studyTypeFr : article.studyType;
   const studyTypeBadgeColor = getStudyTypeBadgeColor(article.studyType);
+  const evidenceLevel = getEvidenceLevel(article.studyType);
   
   return (
     <Card className="border-primary/20 bg-card/50">
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2 mb-2">
+          {/* Evidence Level Badge */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className={`text-[10px] px-1.5 ${evidenceLevel.color}`}>
+                  {language === 'fr' ? evidenceLevel.labelFr : evidenceLevel.label}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[200px]">
+                <p className="text-xs">
+                  {language === 'fr' 
+                    ? 'Pyramide des preuves: Niveau I (plus fort) à VII (plus faible)'
+                    : 'Evidence pyramid: Level I (strongest) to VII (weakest)'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
           {/* Study type badge */}
           {studyTypeLabel && (
             <Badge variant="outline" className={studyTypeBadgeColor}>
