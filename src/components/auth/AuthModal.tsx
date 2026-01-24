@@ -78,8 +78,6 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
     setIsLoading(false);
   };
 
-  if (!open) return null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
