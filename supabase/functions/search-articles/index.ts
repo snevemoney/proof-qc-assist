@@ -8,7 +8,8 @@ const corsHeaders = {
 interface SearchRequest {
   query: string;
   language: 'fr' | 'en';
-  searchMode?: 'natural' | 'keywords' | 'pico';
+  searchMode?: 'natural' | 'keywords' | 'pico' | 'auto-pico' | 'auto-keywords';
+  draftText?: string; // For auto-extraction modes
   keywordData?: {
     keywords: string[];
     meshTerms: string[];
@@ -48,6 +49,20 @@ interface ArticleResult {
   citationAPA?: string;
   url?: string;
   relevanceExplanation?: string;
+}
+
+interface PICOData {
+  population: string;
+  intervention: string;
+  comparison: string;
+  outcome: string;
+}
+
+interface KeywordExtractionResult {
+  keywords: string[];
+  meshTerms: string[];
+  suggestedOperator: 'AND' | 'OR';
+  suggestedStudyType?: string;
 }
 
 // 28 study types with French translations
@@ -114,13 +129,210 @@ function generateAPA7Citation(article: Partial<ArticleResult>): string {
   return citation;
 }
 
+// Extract PICO elements from draft using Lovable AI
+async function extractPICOWithAI(draft: string, language: string): Promise<PICOData> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) {
+    throw new Error('LOVABLE_API_KEY not configured');
+  }
+
+  const systemPrompt = language === 'fr'
+    ? `Vous êtes un expert en méthodologie de recherche en sciences infirmières. Analysez le texte fourni et extrayez les éléments PICO (Population, Intervention, Comparaison, Résultat).
+
+Instructions:
+- Population: Identifiez le groupe cible (patients, âge, condition, contexte)
+- Intervention: Identifiez le traitement, la thérapie ou l'action étudiée
+- Comparaison: Identifiez l'alternative ou le groupe contrôle (si mentionné)
+- Résultat (Outcome): Identifiez les résultats mesurés ou attendus
+
+Si un élément n'est pas clairement identifiable, déduisez-le du contexte ou laissez vide.
+Répondez en anglais pour les termes de recherche (meilleure couverture des bases de données).`
+    : `You are an expert in nursing research methodology. Analyze the provided text and extract PICO elements (Population, Intervention, Comparison, Outcome).
+
+Instructions:
+- Population: Identify the target group (patients, age, condition, setting)
+- Intervention: Identify the treatment, therapy, or action being studied
+- Comparison: Identify the alternative or control group (if mentioned)
+- Outcome: Identify the measured or expected results
+
+If an element is not clearly identifiable, infer from context or leave empty.
+Use English terms for search optimization.`;
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Extract PICO elements from this nursing/health draft:\n\n${draft}` }
+      ],
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'extract_pico',
+          description: 'Extract PICO elements from nursing/health text',
+          parameters: {
+            type: 'object',
+            properties: {
+              population: { 
+                type: 'string', 
+                description: 'Target population (e.g., "elderly patients over 65 with diabetes")' 
+              },
+              intervention: { 
+                type: 'string', 
+                description: 'Treatment or action being studied (e.g., "early mobilization protocol")' 
+              },
+              comparison: { 
+                type: 'string', 
+                description: 'Control or alternative (e.g., "standard care")' 
+              },
+              outcome: { 
+                type: 'string', 
+                description: 'Expected results (e.g., "reduced fall incidence")' 
+              }
+            },
+            required: ['population', 'intervention', 'outcome'],
+            additionalProperties: false
+          }
+        }
+      }],
+      tool_choice: { type: 'function', function: { name: 'extract_pico' } }
+    })
+  });
+
+  if (!response.ok) {
+    console.error('AI extraction failed:', response.status);
+    throw new Error('Failed to extract PICO from draft');
+  }
+
+  const data = await response.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  
+  if (toolCall?.function?.arguments) {
+    try {
+      return JSON.parse(toolCall.function.arguments);
+    } catch {
+      console.error('Failed to parse PICO extraction result');
+    }
+  }
+
+  return { population: '', intervention: '', comparison: '', outcome: '' };
+}
+
+// Extract keywords and MeSH terms from draft using Lovable AI
+async function extractKeywordsWithAI(draft: string, language: string): Promise<KeywordExtractionResult> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) {
+    throw new Error('LOVABLE_API_KEY not configured');
+  }
+
+  const systemPrompt = language === 'fr'
+    ? `Vous êtes un expert en recherche documentaire en sciences infirmières. Analysez le texte et extrayez:
+1. Les mots-clés principaux (en anglais pour les bases de données)
+2. Les termes MeSH correspondants
+3. L'opérateur booléen recommandé (AND pour recherche précise, OR pour recherche élargie)
+4. Le type d'étude suggéré si pertinent
+
+Priorisez les termes utilisés dans CINAHL, PubMed Nursing Subset et Cochrane.`
+    : `You are an expert in nursing literature search. Analyze the text and extract:
+1. Main keywords (in English for database optimization)
+2. Corresponding MeSH terms
+3. Recommended Boolean operator (AND for precise, OR for broad)
+4. Suggested study type if relevant
+
+Prioritize terms used in CINAHL, PubMed Nursing Subset, and Cochrane.`;
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Extract search keywords and MeSH terms from this nursing/health draft:\n\n${draft}` }
+      ],
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'extract_keywords',
+          description: 'Extract keywords and MeSH terms for academic search',
+          parameters: {
+            type: 'object',
+            properties: {
+              keywords: { 
+                type: 'array', 
+                items: { type: 'string' },
+                description: 'Main search keywords (3-8 terms)' 
+              },
+              meshTerms: { 
+                type: 'array', 
+                items: { type: 'string' },
+                description: 'MeSH/CINAHL subject headings (e.g., "Accidental Falls/prevention", "Patient Education")' 
+              },
+              suggestedOperator: { 
+                type: 'string', 
+                enum: ['AND', 'OR'],
+                description: 'Recommended Boolean operator' 
+              },
+              suggestedStudyType: { 
+                type: 'string', 
+                description: 'Suggested study type filter (e.g., "systematic review", "RCT")' 
+              }
+            },
+            required: ['keywords', 'meshTerms', 'suggestedOperator'],
+            additionalProperties: false
+          }
+        }
+      }],
+      tool_choice: { type: 'function', function: { name: 'extract_keywords' } }
+    })
+  });
+
+  if (!response.ok) {
+    console.error('AI extraction failed:', response.status);
+    throw new Error('Failed to extract keywords from draft');
+  }
+
+  const data = await response.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  
+  if (toolCall?.function?.arguments) {
+    try {
+      return JSON.parse(toolCall.function.arguments);
+    } catch {
+      console.error('Failed to parse keyword extraction result');
+    }
+  }
+
+  return { keywords: [], meshTerms: [], suggestedOperator: 'AND' };
+}
+
+// Build PICO search query
+function buildPICOSearchQuery(pico: PICOData): string {
+  const parts: string[] = [];
+  
+  if (pico.population) parts.push(`(${pico.population})`);
+  if (pico.intervention) parts.push(`(${pico.intervention})`);
+  if (pico.comparison) parts.push(`(${pico.comparison})`);
+  if (pico.outcome) parts.push(`(${pico.outcome})`);
+  
+  return parts.join(' AND ');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
   
   try {
-    const { query, language, context, filters, searchMode, keywordData }: SearchRequest = await req.json();
+    const { query, language, context, filters, searchMode, keywordData, draftText }: SearchRequest = await req.json();
     
     const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
     if (!PERPLEXITY_API_KEY) {
@@ -133,9 +345,47 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    let enhancedQuery = query;
+    let extractedPICO: PICOData | null = null;
+    let extractedKeywords: KeywordExtractionResult | null = null;
+    let actualSearchMode = searchMode || 'natural';
+
+    // Handle auto-PICO extraction
+    if (searchMode === 'auto-pico' && draftText) {
+      try {
+        extractedPICO = await extractPICOWithAI(draftText, language);
+        enhancedQuery = buildPICOSearchQuery(extractedPICO);
+        actualSearchMode = 'pico';
+        console.log('Extracted PICO:', extractedPICO);
+        console.log('Built query:', enhancedQuery);
+      } catch (err) {
+        console.error('PICO extraction failed:', err);
+        // Fall back to draft text as query
+        enhancedQuery = draftText.substring(0, 500);
+      }
+    }
+    
+    // Handle auto-keywords extraction
+    if (searchMode === 'auto-keywords' && draftText) {
+      try {
+        extractedKeywords = await extractKeywordsWithAI(draftText, language);
+        const terms = extractedKeywords.meshTerms.length > 0 
+          ? extractedKeywords.meshTerms 
+          : extractedKeywords.keywords;
+        enhancedQuery = terms.join(` ${extractedKeywords.suggestedOperator} `);
+        actualSearchMode = 'keywords';
+        console.log('Extracted keywords:', extractedKeywords);
+        console.log('Built query:', enhancedQuery);
+      } catch (err) {
+        console.error('Keyword extraction failed:', err);
+        // Fall back to draft text as query
+        enhancedQuery = draftText.substring(0, 500);
+      }
+    }
     
     // Determine if this is a keyword-based search
-    const isKeywordSearch = searchMode === 'keywords' && keywordData;
+    const isKeywordSearch = actualSearchMode === 'keywords' || (searchMode === 'keywords' && keywordData);
     
     // Build the search prompt based on search mode
     let systemPrompt: string;
@@ -244,34 +494,39 @@ IMPORTANT:
 - Return ONLY JSON, no additional text`;
     }
 
-    // Build context-aware query
-    let enhancedQuery = query;
+    // Build context-aware query for non-auto modes
+    if (searchMode !== 'auto-pico' && searchMode !== 'auto-keywords') {
+      // For keyword search, build a structured query
+      if (isKeywordSearch && keywordData) {
+        const meshTermsStr = keywordData.meshTerms.join(` ${keywordData.operator} `);
+        const keywordsStr = keywordData.keywords.join(` ${keywordData.operator} `);
+        enhancedQuery = meshTermsStr || keywordsStr;
+        
+        // Add study type filter to query
+        if (keywordData.studyType) {
+          const studyTypeMap: Record<string, string> = {
+            'systematic-review': 'systematic review',
+            'meta-analysis': 'meta-analysis',
+            'rct': 'randomized controlled trial',
+            'cohort': 'cohort study',
+            'qualitative': 'qualitative study',
+            'guideline': 'clinical guideline',
+          };
+          enhancedQuery += ` AND (${studyTypeMap[keywordData.studyType] || keywordData.studyType})`;
+        }
+      } else if (context) {
+        if (context.draftTopic) {
+          enhancedQuery += ` (related to: ${context.draftTopic})`;
+        }
+        if (context.unsupportedClaims && context.unsupportedClaims.length > 0) {
+          enhancedQuery += ` (need evidence for: ${context.unsupportedClaims.slice(0, 2).join(', ')})`;
+        }
+      }
+    }
     
-    // For keyword search, build a structured query
-    if (isKeywordSearch && keywordData) {
-      const meshTermsStr = keywordData.meshTerms.join(` ${keywordData.operator} `);
-      const keywordsStr = keywordData.keywords.join(` ${keywordData.operator} `);
-      enhancedQuery = meshTermsStr || keywordsStr;
-      
-      // Add study type filter to query
-      if (keywordData.studyType) {
-        const studyTypeMap: Record<string, string> = {
-          'systematic-review': 'systematic review',
-          'meta-analysis': 'meta-analysis',
-          'rct': 'randomized controlled trial',
-          'cohort': 'cohort study',
-          'qualitative': 'qualitative study',
-          'guideline': 'clinical guideline',
-        };
-        enhancedQuery += ` AND (${studyTypeMap[keywordData.studyType] || keywordData.studyType})`;
-      }
-    } else if (context) {
-      if (context.draftTopic) {
-        enhancedQuery += ` (related to: ${context.draftTopic})`;
-      }
-      if (context.unsupportedClaims && context.unsupportedClaims.length > 0) {
-        enhancedQuery += ` (need evidence for: ${context.unsupportedClaims.slice(0, 2).join(', ')})`;
-      }
+    // Add study type filter from extracted keywords if available
+    if (extractedKeywords?.suggestedStudyType && !enhancedQuery.toLowerCase().includes(extractedKeywords.suggestedStudyType.toLowerCase())) {
+      enhancedQuery += ` AND (${extractedKeywords.suggestedStudyType})`;
     }
     
     // Apply recency filter (from keyword search or filters)
@@ -445,8 +700,11 @@ Return a JSON object with this structure:
     
     return new Response(JSON.stringify({ 
       articles,
-      query,
+      query: enhancedQuery,
       totalResults: articles.length,
+      // Return extracted data for display
+      extractedPICO,
+      extractedKeywords,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
