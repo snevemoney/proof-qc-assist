@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FileText, Edit3, BarChart3, Search, ChevronRight, ChevronLeft, X, Sparkles } from 'lucide-react';
+import { FileText, Edit3, BarChart3, Search, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -64,16 +65,18 @@ export const OnboardingModal = () => {
     }
   }, []);
 
-  const handleClose = () => {
-    localStorage.setItem(ONBOARDING_KEY, 'true');
-    setIsOpen(false);
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      localStorage.setItem(ONBOARDING_KEY, 'true');
+    }
+    setIsOpen(open);
   };
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      handleClose();
+      handleOpenChange(false);
     }
   };
 
@@ -87,18 +90,18 @@ export const OnboardingModal = () => {
   const Icon = step.icon;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              {language === 'fr' ? 'Bienvenue sur ProofCheck' : 'Welcome to ProofCheck'}
-            </DialogTitle>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            {language === 'fr' ? 'Bienvenue sur ProofCheck' : 'Welcome to ProofCheck'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {language === 'fr' 
+              ? 'Guide de démarrage pour ProofCheck' 
+              : 'Getting started guide for ProofCheck'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-6">
