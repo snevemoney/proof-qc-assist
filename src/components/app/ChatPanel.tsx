@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, MessageCircle, Sparkles, Trash2, Stethoscope, ChevronDown, Plus, Check, Pencil, X } from 'lucide-react';
+import { Send, MessageCircle, Sparkles, Trash2, Stethoscope, ChevronDown, Plus, Check, Pencil, X, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,8 +11,11 @@ import { useChatMessages } from '@/hooks/useChatMessages';
 import { ChatMessage } from './ChatMessage';
 import { QuickActions } from './QuickActions';
 import { PICOSearchForm } from './PICOSearchForm';
+import { KeywordSearchForm } from './KeywordSearchForm';
 import { NursingDatabaseLinks } from './NursingDatabaseLinks';
 import { cn } from '@/lib/utils';
+
+type SearchMode = 'chat' | 'pico' | 'keywords';
 
 export const ChatPanel = () => {
   const { language } = useLanguage();
@@ -60,7 +63,7 @@ export const ChatPanel = () => {
   
   const [inputValue, setInputValue] = useState('');
   const [isResearchMode, setIsResearchMode] = useState(false);
-  const [showPICO, setShowPICO] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>('chat');
   const [isLoading, setIsLoading] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -397,11 +400,19 @@ export const ChatPanel = () => {
           {/* Nursing Database Links */}
           <NursingDatabaseLinks />
 
-          {showPICO ? (
+          {searchMode === 'pico' ? (
             <div className="p-4 border-t border-border">
               <PICOSearchForm 
                 onSearch={handleQuickAction}
-                onClose={() => setShowPICO(false)}
+                onClose={() => setSearchMode('chat')}
+                disabled={loading}
+              />
+            </div>
+          ) : searchMode === 'keywords' ? (
+            <div className="p-4 border-t border-border">
+              <KeywordSearchForm 
+                onSearch={handleQuickAction}
+                onClose={() => setSearchMode('chat')}
                 disabled={loading}
               />
             </div>
@@ -419,17 +430,27 @@ export const ChatPanel = () => {
                 onClick={() => setIsResearchMode(!isResearchMode)}
               >
                 <Sparkles className="h-3 w-3" />
-                {language === 'fr' ? 'Mode recherche' : 'Research mode'}
+                {language === 'fr' ? 'Recherche' : 'Research'}
               </Button>
               <Button
                 type="button"
-                variant={showPICO ? "default" : "outline"}
+                variant={searchMode === 'pico' ? "default" : "outline"}
                 size="sm"
                 className="text-xs gap-1"
-                onClick={() => setShowPICO(!showPICO)}
+                onClick={() => setSearchMode(searchMode === 'pico' ? 'chat' : 'pico')}
               >
                 <Stethoscope className="h-3 w-3" />
                 PICO
+              </Button>
+              <Button
+                type="button"
+                variant={searchMode === 'keywords' ? "default" : "outline"}
+                size="sm"
+                className="text-xs gap-1"
+                onClick={() => setSearchMode(searchMode === 'keywords' ? 'chat' : 'keywords')}
+              >
+                <Key className="h-3 w-3" />
+                {language === 'fr' ? 'Mots-clés' : 'Keywords'}
               </Button>
             </div>
             
