@@ -10,12 +10,8 @@ import { useProjectContext } from '@/contexts/ProjectContext';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { ChatMessage } from './ChatMessage';
 import { QuickActions } from './QuickActions';
-import { PICOSearchForm } from './PICOSearchForm';
-import { KeywordSearchForm } from './KeywordSearchForm';
 import { NursingDatabaseLinks } from './NursingDatabaseLinks';
 import { cn } from '@/lib/utils';
-
-type SearchMode = 'chat' | 'pico' | 'keywords';
 
 export const ChatPanel = () => {
   const { language } = useLanguage();
@@ -64,7 +60,6 @@ export const ChatPanel = () => {
   
   const [inputValue, setInputValue] = useState('');
   const [isResearchMode, setIsResearchMode] = useState(false);
-  const [searchMode, setSearchMode] = useState<SearchMode>('chat');
   const [isLoading, setIsLoading] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -409,25 +404,8 @@ export const ChatPanel = () => {
           {/* Nursing Database Links */}
           <NursingDatabaseLinks />
 
-          {searchMode === 'pico' ? (
-            <div className="p-4 border-t border-border">
-              <PICOSearchForm 
-                onSearch={handleQuickAction}
-                onClose={() => setSearchMode('chat')}
-                disabled={loading}
-              />
-            </div>
-          ) : searchMode === 'keywords' ? (
-            <div className="p-4 border-t border-border">
-              <KeywordSearchForm 
-                onSearch={handleQuickAction}
-                onClose={() => setSearchMode('chat')}
-                disabled={loading}
-              />
-            </div>
-          ) : (
-            <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={loading} />
-          )}
+          {/* Quick Actions - Always visible */}
+          <QuickActions onAction={handleQuickAction} hasVerificationResults={hasVerificationResults} disabled={loading} />
 
           <form onSubmit={handleSubmit} className="p-4 border-t border-border flex-shrink-0">
             <div className="flex gap-2 mb-2">
@@ -443,20 +421,34 @@ export const ChatPanel = () => {
               </Button>
               <Button
                 type="button"
-                variant={searchMode === 'pico' ? "default" : "outline"}
+                variant="outline"
                 size="sm"
                 className="text-xs gap-1"
-                onClick={() => setSearchMode(searchMode === 'pico' ? 'chat' : 'pico')}
+                disabled={loading || !projectContext.draftText}
+                onClick={() => handleQuickAction(
+                  language === 'fr' 
+                    ? 'Analyse mon brouillon avec le framework PICO et trouve des articles académiques.' 
+                    : 'Analyze my draft using the PICO framework and find academic articles.',
+                  'find-sources'
+                )}
+                title={!projectContext.draftText ? (language === 'fr' ? 'Ajoutez un brouillon d\'abord' : 'Add a draft first') : ''}
               >
                 <Stethoscope className="h-3 w-3" />
                 PICO
               </Button>
               <Button
                 type="button"
-                variant={searchMode === 'keywords' ? "default" : "outline"}
+                variant="outline"
                 size="sm"
                 className="text-xs gap-1"
-                onClick={() => setSearchMode(searchMode === 'keywords' ? 'chat' : 'keywords')}
+                disabled={loading || !projectContext.draftText}
+                onClick={() => handleQuickAction(
+                  language === 'fr' 
+                    ? 'Extrais les mots-clés et termes MeSH de mon brouillon et trouve des articles.' 
+                    : 'Extract keywords and MeSH terms from my draft and find articles.',
+                  'find-sources'
+                )}
+                title={!projectContext.draftText ? (language === 'fr' ? 'Ajoutez un brouillon d\'abord' : 'Add a draft first') : ''}
               >
                 <Key className="h-3 w-3" />
                 {language === 'fr' ? 'Mots-clés' : 'Keywords'}

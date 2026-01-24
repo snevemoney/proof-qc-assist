@@ -152,11 +152,42 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     // Handle context-aware search markers
     let displayContent = content;
     let searchQuery = content;
-    let searchMode: 'natural' | 'keywords' | 'pico' = 'natural';
+    let searchMode: 'natural' | 'keywords' | 'pico' | 'auto-pico' | 'auto-keywords' = 'natural';
     let keywordData: { keywords: string[]; meshTerms: string[]; operator: 'AND' | 'OR'; studyType?: string; recency?: string } | undefined;
     
-    // Handle KEYWORD search
-    if (content.startsWith('__KEYWORD_SEARCH__')) {
+    // Detect auto-PICO request (AI-powered extraction)
+    const isPICORequest = (
+      lowerContent.includes('pico') || 
+      lowerContent.includes('framework pico') ||
+      lowerContent.includes('cadre pico')
+    ) && action === 'find-sources';
+    
+    // Detect auto-keywords request (AI-powered extraction)
+    const isKeywordsRequest = (
+      lowerContent.includes('keyword') || 
+      lowerContent.includes('mot-clé') || 
+      lowerContent.includes('mots-clés') ||
+      lowerContent.includes('mesh') ||
+      lowerContent.includes('termes')
+    ) && action === 'find-sources';
+    
+    if (isPICORequest) {
+      searchMode = 'auto-pico';
+      displayContent = language === 'fr'
+        ? '🔬 Analyse PICO automatique de votre brouillon...'
+        : '🔬 Automatic PICO analysis of your draft...';
+      // searchQuery will be built by the edge function using draftText
+      searchQuery = 'PICO analysis';
+    } else if (isKeywordsRequest) {
+      searchMode = 'auto-keywords';
+      displayContent = language === 'fr'
+        ? '🔑 Extraction automatique des mots-clés et termes MeSH...'
+        : '🔑 Automatic extraction of keywords and MeSH terms...';
+      // searchQuery will be built by the edge function using draftText
+      searchQuery = 'Keyword extraction';
+    }
+    // Handle legacy manual KEYWORD search (keep for backward compatibility)
+    else if (content.startsWith('__KEYWORD_SEARCH__')) {
       try {
         const kwData = JSON.parse(content.replace('__KEYWORD_SEARCH__', ''));
         keywordData = kwData;
@@ -176,7 +207,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         searchQuery = content.replace('__KEYWORD_SEARCH__', '');
       }
     }
-    // Handle PICO search
+    // Handle legacy manual PICO search (keep for backward compatibility)
     else if (content.startsWith('__PICO_SEARCH__')) {
       try {
         const picoData = JSON.parse(content.replace('__PICO_SEARCH__', ''));
@@ -293,6 +324,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             language,
             searchMode,
             keywordData,
+            // Pass full draft text for auto-extraction modes
+            draftText: (searchMode === 'auto-pico' || searchMode === 'auto-keywords') 
+              ? projectContext.draftText 
+              : undefined,
             context: {
               draftTopic: projectContext.draftText.substring(0, 500),
               existingSources: projectContext.sources.map(s => s.title),
