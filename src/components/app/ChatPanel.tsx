@@ -36,6 +36,7 @@ export const ChatPanel = () => {
     addSourceFromSearch,
     isPanelOpen,
     setIsPanelOpen,
+    clearMessages: clearContextMessages,
   } = useChat();
   
   // Use persistent chat messages from the hook
@@ -87,9 +88,15 @@ export const ChatPanel = () => {
     }
   }, [showSessions]);
 
+  // Clear context messages when switching sessions
+  useEffect(() => {
+    clearContextMessages();
+  }, [currentSessionId, clearContextMessages]);
+
   const currentSession = sessions.find(s => s.id === currentSessionId);
 
   const handleCreateNewSession = async () => {
+    clearContextMessages();
     await createSession(language === 'fr' ? 'Nouvelle conversation' : 'New chat');
     setShowSessions(false);
   };
@@ -220,6 +227,7 @@ export const ChatPanel = () => {
 
   const handleClearMessages = async () => {
     await clearPersistentMessages();
+    clearContextMessages();
   };
 
   const hasVerificationResults = projectContext.claims.length > 0;
@@ -269,7 +277,7 @@ export const ChatPanel = () => {
               </Button>
               
               {showSessions && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-[60] overflow-hidden">
                   <div className="p-2 border-b border-border">
                     <Button 
                       variant="ghost" 
@@ -329,7 +337,8 @@ export const ChatPanel = () => {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive pointer-events-auto"
+                                  onMouseDown={(e) => e.stopPropagation()}
                                   onClick={(e) => handleDeleteSession(session.id, e)}
                                 >
                                   <Trash2 className="h-3 w-3" />
