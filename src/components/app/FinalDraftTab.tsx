@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Copy, Loader2, RefreshCw, Sparkles, User, Check, UserCheck } from 'lucide-react';
+import { Download, Copy, Loader2, RefreshCw, Sparkles, User, Check, UserCheck, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,9 +38,21 @@ export const FinalDraftTab = ({
     analyzeStyle,
     autoAnalyzeIfNeeded 
   } = useWritingProfile();
-  const { finalDraft, isGenerating, error, generateFinalDraft, setFinalDraft } = useFinalDraft();
+  const { 
+    finalDraft, 
+    isGenerating, 
+    error, 
+    generateFinalDraft, 
+    setFinalDraft,
+    regenerateWithFeedback,
+    versions,
+    currentVersionIndex,
+    goToPreviousVersion,
+    goToNextVersion
+  } = useFinalDraft();
   const [viewMode, setViewMode] = useState<'final' | 'compare'>('final');
   const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   // Auto-analyze writing style when tab is viewed and no profile exists
   useEffect(() => {
@@ -63,7 +75,29 @@ export const FinalDraftTab = ({
 
     if (success) {
       toast.success(language === 'fr' ? 'Version finale générée!' : 'Final version generated!');
+      setFeedback(''); // Clear feedback on new generation
     }
+  };
+
+  const handleRegenerateWithFeedback = async () => {
+    if (!feedback.trim()) return;
+    
+    const success = await regenerateWithFeedback(feedback, {
+      draftText,
+      claims,
+      interventions,
+      sources,
+      language,
+    });
+
+    if (success) {
+      toast.success(language === 'fr' ? 'Version améliorée générée!' : 'Improved version generated!');
+      setFeedback('');
+    }
+  };
+
+  const handleQuickFeedback = (quickFeedback: string) => {
+    setFeedback(prev => prev ? `${prev}. ${quickFeedback}` : quickFeedback);
   };
 
   const handleAnalyzeStyle = async () => {
@@ -325,21 +359,50 @@ export const FinalDraftTab = ({
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === 'final' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('final')}
-                >
-                  {language === 'fr' ? 'Version finale' : 'Final Version'}
-                </Button>
-                <Button
-                  variant={viewMode === 'compare' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('compare')}
-                >
-                  {language === 'fr' ? 'Comparer' : 'Compare'}
-                </Button>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === 'final' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('final')}
+                  >
+                    {language === 'fr' ? 'Version finale' : 'Final Version'}
+                  </Button>
+                  <Button
+                    variant={viewMode === 'compare' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('compare')}
+                  >
+                    {language === 'fr' ? 'Comparer' : 'Compare'}
+                  </Button>
+                </div>
+                
+                {/* Version navigation */}
+                {versions.length > 1 && (
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={goToPreviousVersion}
+                      disabled={currentVersionIndex <= 0}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      v{currentVersionIndex + 1}/{versions.length}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={goToNextVersion}
+                      disabled={currentVersionIndex >= versions.length - 1}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {finalDraft && !isGenerating && (
@@ -420,6 +483,83 @@ export const FinalDraftTab = ({
                 ? 'Cliquez sur "Générer ma version finale" pour créer une version corrigée qui préserve votre style d\'écriture.'
                 : 'Click "Generate My Final Version" to create a corrected version that preserves your writing style.'}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Feedback/Refinement Section */}
+      {finalDraft && !isGenerating && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              {language === 'fr' ? 'Améliorer ce résultat' : 'Improve This Result'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'fr' 
+                ? 'Décrivez ce que vous n\'aimez pas et régénérez.'
+                : 'Describe what you don\'t like and regenerate.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Quick feedback chips */}
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleQuickFeedback(language === 'fr' ? 'Trop long' : 'Too long')}
+              >
+                {language === 'fr' ? 'Trop long' : 'Too long'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleQuickFeedback(language === 'fr' ? 'Trop formel' : 'Too formal')}
+              >
+                {language === 'fr' ? 'Trop formel' : 'Too formal'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleQuickFeedback(language === 'fr' ? 'Trop simple' : 'Too simple')}
+              >
+                {language === 'fr' ? 'Trop simple' : 'Too simple'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleQuickFeedback(language === 'fr' ? 'Ne sonne pas comme moi' : "Doesn't sound like me")}
+              >
+                {language === 'fr' ? 'Ne sonne pas comme moi' : "Doesn't sound like me"}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleQuickFeedback(language === 'fr' ? 'Besoin de plus de citations' : 'Needs more citations')}
+              >
+                {language === 'fr' ? 'Plus de citations' : 'More citations'}
+              </Button>
+            </div>
+            
+            {/* Free-form feedback */}
+            <Textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder={language === 'fr' 
+                ? "Décrivez ce que vous n'aimez pas ou ce qui devrait être amélioré..." 
+                : "Describe what you don't like or what should be improved..."}
+              className="min-h-[80px]"
+            />
+            
+            {/* Regenerate button */}
+            <Button 
+              onClick={handleRegenerateWithFeedback}
+              disabled={!feedback.trim() || isGenerating}
+              className="w-full gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              {language === 'fr' ? 'Régénérer avec mes commentaires' : 'Regenerate with my feedback'}
+            </Button>
           </CardContent>
         </Card>
       )}

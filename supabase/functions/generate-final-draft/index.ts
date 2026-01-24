@@ -51,6 +51,8 @@ interface GenerateRequest {
   interventions: Intervention[];
   sources: Source[];
   language: 'fr' | 'en';
+  feedback?: string;
+  previousVersion?: string;
 }
 
 serve(async (req) => {
@@ -67,7 +69,7 @@ serve(async (req) => {
       );
     }
 
-    const { draftText, claims, interventions, sources, language }: GenerateRequest = await req.json();
+    const { draftText, claims, interventions, sources, language, feedback, previousVersion }: GenerateRequest = await req.json();
 
     if (!draftText || draftText.trim().length === 0) {
       return new Response(
@@ -186,24 +188,58 @@ The student's writing profile is not yet established. Make necessary corrections
       });
     }
 
-    if (claimsToFix.length === 0 && interventionsToFix.length === 0) {
+    if (claimsToFix.length === 0 && interventionsToFix.length === 0 && !feedback) {
       issuesSection += language === 'fr' 
         ? 'Aucun problème majeur détecté. Améliorer la fluidité et la clarté générale.\n'
         : 'No major issues detected. Improve overall flow and clarity.\n';
     }
 
+    // Build feedback/refinement section if user provided critique
+    let feedbackSection = '';
+    if (feedback && previousVersion) {
+      feedbackSection = language === 'fr'
+        ? `
+## CRITIQUE DE L'ÉTUDIANT SUR LA VERSION PRÉCÉDENTE:
+"${feedback}"
+
+## VERSION PRÉCÉDENTE À AMÉLIORER:
+${previousVersion}
+
+## INSTRUCTIONS DE RAFFINEMENT:
+1. Adresser TOUTES les critiques de l'étudiant en priorité
+2. Améliorer les sections mentionnées spécifiquement
+3. Garder les parties non critiquées aussi similaires que possible
+4. Toujours maintenir le style d'écriture de l'étudiant
+5. Ne pas introduire de nouveaux problèmes en corrigeant les anciens
+`
+        : `
+## STUDENT'S CRITIQUE OF PREVIOUS VERSION:
+"${feedback}"
+
+## PREVIOUS VERSION TO IMPROVE:
+${previousVersion}
+
+## REFINEMENT INSTRUCTIONS:
+1. Address ALL student feedback as top priority
+2. Improve the specifically mentioned sections
+3. Keep non-critiqued parts as similar as possible
+4. Always maintain the student's writing style
+5. Don't introduce new issues while fixing old ones
+`;
+    }
     const systemPrompt = language === 'fr'
       ? `Vous êtes un assistant d'écriture académique spécialisé en sciences infirmières. Votre tâche est de corriger le brouillon de l'étudiant en appliquant les suggestions de vérification TOUT EN PRÉSERVANT EXACTEMENT leur style d'écriture personnel.
 
 ${styleSection}
 
 ${issuesSection}
+${feedbackSection}
 
 ## SOURCES DISPONIBLES POUR CITATIONS:
 ${sourcesRef}
 
 ## INSTRUCTIONS:
-1. Appliquer TOUTES les corrections suggérées
+1. ${feedback ? "Adresser les critiques de l'étudiant EN PRIORITÉ" : "Appliquer TOUTES les corrections suggérées"}
 2. Ajouter des citations appropriées aux sources fournies
 3. MAINTENIR le style de l'étudiant - c'est CRITIQUE
 4. Retourner UNIQUEMENT le texte corrigé, sans explications
@@ -215,12 +251,13 @@ Retournez le brouillon corrigé en préservant le style de l'étudiant.`
 ${styleSection}
 
 ${issuesSection}
+${feedbackSection}
 
 ## AVAILABLE SOURCES FOR CITATIONS:
 ${sourcesRef}
 
 ## INSTRUCTIONS:
-1. Apply ALL suggested corrections
+1. ${feedback ? "Address student's critique as TOP PRIORITY" : "Apply ALL suggested corrections"}
 2. Add appropriate citations to provided sources
 3. MAINTAIN the student's style - this is CRITICAL
 4. Return ONLY the corrected text, no explanations
