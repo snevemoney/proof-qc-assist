@@ -1,14 +1,22 @@
-import { Lightbulb, Search, BookOpen, PenTool, GraduationCap, HeartPulse, Stethoscope } from 'lucide-react';
+import { Lightbulb, Search, BookOpen, PenTool, GraduationCap, HeartPulse, Stethoscope, ClipboardCheck, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface QuickActionsProps {
   onAction: (message: string, action: 'chat' | 'research' | 'find-sources') => void;
   hasVerificationResults: boolean;
+  hasInstructions?: boolean;
+  hasEvaluationGrid?: boolean;
   disabled?: boolean;
 }
 
-export const QuickActions = ({ onAction, hasVerificationResults, disabled }: QuickActionsProps) => {
+export const QuickActions = ({ 
+  onAction, 
+  hasVerificationResults, 
+  hasInstructions = false,
+  hasEvaluationGrid = false,
+  disabled 
+}: QuickActionsProps) => {
   const { language } = useLanguage();
   
   const actions = [
@@ -18,7 +26,31 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
       message: '__AUTO_SEARCH_CONTEXT__',
       action: 'find-sources' as const,
       requiresResults: false,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
       primary: true,
+    },
+    {
+      icon: ClipboardCheck,
+      label: language === 'fr' ? 'Vérifier exigences' : 'Check requirements',
+      message: language === 'fr'
+        ? 'Analyse mon brouillon par rapport aux consignes du travail. Quelles exigences ne sont pas respectées et comment puis-je les corriger?'
+        : 'Analyze my draft against the assignment instructions. Which requirements are not met and how can I fix them?',
+      action: 'chat' as const,
+      requiresResults: false,
+      requiresInstructions: true,
+      requiresEvaluationGrid: false,
+    },
+    {
+      icon: BarChart3,
+      label: language === 'fr' ? 'Améliorer mes scores' : 'Improve my scores',
+      message: language === 'fr'
+        ? 'D\'après la grille d\'évaluation et mes scores actuels, quelles sont les améliorations prioritaires pour maximiser ma note? Concentre-toi sur les critères à fort poids et les scores les plus faibles.'
+        : 'Based on the evaluation grid and my current scores, what are the priority improvements to maximize my grade? Focus on high-weight criteria and lowest scores.',
+      action: 'chat' as const,
+      requiresResults: true,
+      requiresInstructions: false,
+      requiresEvaluationGrid: true,
     },
     {
       icon: HeartPulse,
@@ -28,6 +60,8 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
         : 'Check my nursing care plan. Are the interventions evidence-based? Identify gaps in clinical rationales.',
       action: 'chat' as const,
       requiresResults: false,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
     },
     {
       icon: Stethoscope,
@@ -37,6 +71,8 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
         : 'Help me formulate a PICO clinical question based on my draft. What is the health problem, proposed intervention, and expected outcomes?',
       action: 'chat' as const,
       requiresResults: false,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
     },
     {
       icon: Lightbulb,
@@ -46,6 +82,8 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
         : 'Can you explain my verification results? What are my weakest claims and how can I improve them?',
       action: 'chat' as const,
       requiresResults: true,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
     },
     {
       icon: Search,
@@ -53,6 +91,8 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
       message: '__AUTO_SEARCH_WEAK_CLAIMS__',
       action: 'find-sources' as const,
       requiresResults: true,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
     },
     {
       icon: BookOpen,
@@ -62,6 +102,8 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
         : 'How should I properly cite my sources in my work? Give me examples in APA format.',
       action: 'chat' as const,
       requiresResults: false,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
     },
     {
       icon: PenTool,
@@ -71,10 +113,20 @@ export const QuickActions = ({ onAction, hasVerificationResults, disabled }: Qui
         : 'Analyze my draft and suggest improvements for academic tone and argument clarity.',
       action: 'chat' as const,
       requiresResults: false,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
     },
   ];
   
-  const availableActions = actions.filter(a => !a.requiresResults || hasVerificationResults);
+  const availableActions = actions.filter(a => {
+    // Check results requirement
+    if (a.requiresResults && !hasVerificationResults) return false;
+    // Check instructions requirement
+    if (a.requiresInstructions && !hasInstructions) return false;
+    // Check evaluation grid requirement
+    if (a.requiresEvaluationGrid && !hasEvaluationGrid) return false;
+    return true;
+  });
   
   return (
     <div className="p-2 sm:p-3 border-t border-border">
