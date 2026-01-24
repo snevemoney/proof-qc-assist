@@ -1,4 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  buildKnowledgePromptSection, 
+  detectTopicFromText,
+  type SystemKnowledge,
+  type SourceQuality 
+} from "../_shared/knowledge.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -368,6 +375,51 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
     
+    // Fetch system knowledge for enhanced responses (flywheel learning)
+    let knowledgeSection = '';
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
+      
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Detect topics from draft or last message
+        const textForTopics = context.draftText || messages[messages.length - 1]?.content || '';
+        const detectedTopics = detectTopicFromText(textForTopics);
+        
+        // Fetch relevant knowledge
+        const { data: knowledge } = await supabase
+          .from('system_knowledge')
+          .select('*')
+          .in('topic', [...detectedTopics, 'general'])
+          .order('confidence_score', { ascending: false })
+          .limit(5);
+        
+        // Fetch high-quality sources for these topics
+        const { data: topSources } = await supabase
+          .from('source_quality_ratings')
+          .select('*')
+          .overlaps('topic_areas', detectedTopics)
+          .gte('support_rate', 0.6)
+          .gte('times_used', 3)
+          .order('support_rate', { ascending: false })
+          .limit(5);
+        
+        if ((knowledge && knowledge.length > 0) || (topSources && topSources.length > 0)) {
+          knowledgeSection = `\n\n## ${language === 'fr' ? 'INTELLIGENCE COLLECTIVE' : 'COLLECTIVE INTELLIGENCE'}:\n` + 
+            buildKnowledgePromptSection(
+              knowledge as SystemKnowledge[] || [],
+              topSources as SourceQuality[] || [],
+              language
+            );
+        }
+      }
+    } catch (e) {
+      // Non-critical: continue without knowledge enhancement
+      console.log('Could not fetch system knowledge:', e);
+    }
+    
     const systemPrompt = language === 'fr' ? systemPromptFR : systemPromptEN;
     const contextString = buildContextString(context, language);
     
@@ -379,7 +431,7 @@ serve(async (req) => {
     }
     
     // Build the full message with context
-    const fullSystemPrompt = `${systemPrompt}\n\n${contextString}${researchResults ? `\n\n## ${language === 'fr' ? 'Résultats de Recherche Web' : 'Web Research Results'}:\n${researchResults}` : ''}`;
+    const fullSystemPrompt = `${systemPrompt}\n\n${contextString}${knowledgeSection}${researchResults ? `\n\n## ${language === 'fr' ? 'Résultats de Recherche Web' : 'Web Research Results'}:\n${researchResults}` : ''}`;
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

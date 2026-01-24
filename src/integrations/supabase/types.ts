@@ -106,6 +106,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          share_anonymized_data: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -113,6 +114,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          share_anonymized_data?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -120,6 +122,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          share_anonymized_data?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
@@ -217,6 +220,137 @@ export type Database = {
         }
         Relationships: []
       }
+      source_quality_ratings: {
+        Row: {
+          avg_relevance: number | null
+          created_at: string | null
+          id: string
+          source_authors: string | null
+          source_hash: string
+          source_journal: string | null
+          source_title: string | null
+          source_year: string | null
+          support_rate: number | null
+          times_partial: number | null
+          times_supported: number | null
+          times_unsupported: number | null
+          times_used: number | null
+          topic_areas: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          avg_relevance?: number | null
+          created_at?: string | null
+          id?: string
+          source_authors?: string | null
+          source_hash: string
+          source_journal?: string | null
+          source_title?: string | null
+          source_year?: string | null
+          support_rate?: number | null
+          times_partial?: number | null
+          times_supported?: number | null
+          times_unsupported?: number | null
+          times_used?: number | null
+          topic_areas?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          avg_relevance?: number | null
+          created_at?: string | null
+          id?: string
+          source_authors?: string | null
+          source_hash?: string
+          source_journal?: string | null
+          source_title?: string | null
+          source_year?: string | null
+          support_rate?: number | null
+          times_partial?: number | null
+          times_supported?: number | null
+          times_unsupported?: number | null
+          times_used?: number | null
+          topic_areas?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      system_knowledge: {
+        Row: {
+          category: Database["public"]["Enums"]["knowledge_category"]
+          confidence_score: number | null
+          created_at: string | null
+          data: Json
+          id: string
+          success_rate: number | null
+          topic: string | null
+          topic_hash: string | null
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["knowledge_category"]
+          confidence_score?: number | null
+          created_at?: string | null
+          data?: Json
+          id?: string
+          success_rate?: number | null
+          topic?: string | null
+          topic_hash?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["knowledge_category"]
+          confidence_score?: number | null
+          created_at?: string | null
+          data?: Json
+          id?: string
+          success_rate?: number | null
+          topic?: string | null
+          topic_hash?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
+      verification_feedback: {
+        Row: {
+          accuracy_rating: number | null
+          claim_feedback: Json | null
+          created_at: string | null
+          id: string
+          user_id: string
+          verification_id: string | null
+          was_helpful: boolean | null
+        }
+        Insert: {
+          accuracy_rating?: number | null
+          claim_feedback?: Json | null
+          created_at?: string | null
+          id?: string
+          user_id: string
+          verification_id?: string | null
+          was_helpful?: boolean | null
+        }
+        Update: {
+          accuracy_rating?: number | null
+          claim_feedback?: Json | null
+          created_at?: string | null
+          id?: string
+          user_id?: string
+          verification_id?: string | null
+          was_helpful?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_feedback_verification_id_fkey"
+            columns: ["verification_id"]
+            isOneToOne: false
+            referencedRelation: "verification_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verification_history: {
         Row: {
           claims: Json
@@ -287,7 +421,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      knowledge_category:
+        | "common_error"
+        | "source_quality"
+        | "intervention_pattern"
+        | "requirement_template"
+        | "topic_insight"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -414,6 +553,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      knowledge_category: [
+        "common_error",
+        "source_quality",
+        "intervention_pattern",
+        "requirement_template",
+        "topic_insight",
+      ],
+    },
   },
 } as const
