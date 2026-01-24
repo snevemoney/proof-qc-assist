@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Download, Copy, Loader2, RefreshCw, Sparkles, User, Check, UserCheck, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,8 @@ import { useWritingProfile, WritingProfile } from '@/hooks/useWritingProfile';
 import { useFinalDraft } from '@/hooks/useFinalDraft';
 import { Claim, Intervention, Source } from '@/lib/verification';
 import { toast } from 'sonner';
-
+import { SelectionFeedbackPopover } from './SelectionFeedbackPopover';
+import { DiffView } from './DiffView';
 interface FinalDraftTabProps {
   draftText: string;
   claims: Claim[];
@@ -53,7 +54,11 @@ export const FinalDraftTab = ({
   const [viewMode, setViewMode] = useState<'final' | 'compare'>('final');
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState('');
-
+  
+  // Text selection state
+  const [selectedText, setSelectedText] = useState('');
+  const [showSelectionPopover, setShowSelectionPopover] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
   // Auto-analyze writing style when tab is viewed and no profile exists
   useEffect(() => {
     if (user && !profile && !profileLoading && !isAnalyzing && hasVerified) {
@@ -99,6 +104,24 @@ export const FinalDraftTab = ({
   const handleQuickFeedback = (quickFeedback: string) => {
     setFeedback(prev => prev ? `${prev}. ${quickFeedback}` : quickFeedback);
   };
+
+  // Handle text selection in the final draft view
+  const handleTextSelection = useCallback((e: React.MouseEvent) => {
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    
+    if (text && text.length > 3) {
+      setSelectedText(text);
+      setPopoverPosition({ x: e.clientX, y: e.clientY });
+      setShowSelectionPopover(true);
+    }
+  }, []);
+
+  // Add targeted feedback from selection
+  const handleAddTargetedFeedback = useCallback((targetedFeedback: string) => {
+    setFeedback(prev => prev ? `${prev}\n${targetedFeedback}` : targetedFeedback);
+    toast.success(language === 'fr' ? 'Commentaire ajouté' : 'Feedback added');
+  }, [language]);
 
   const handleAnalyzeStyle = async () => {
     const success = await analyzeStyle(language);
@@ -421,40 +444,45 @@ export const FinalDraftTab = ({
           </CardHeader>
           <CardContent>
             {viewMode === 'final' ? (
-              <Textarea
-                value={finalDraft}
-                onChange={(e) => setFinalDraft(e.target.value)}
-                className="min-h-[400px] font-mono text-sm"
-                placeholder={isGenerating 
-                  ? (language === 'fr' ? 'Génération en cours...' : 'Generating...') 
-                  : ''
-                }
-                disabled={isGenerating}
-              />
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-muted-foreground">
-                    {language === 'fr' ? 'Original' : 'Original'}
-                  </h4>
-                  <Textarea
-                    value={draftText}
-                    readOnly
-                    className="min-h-[400px] font-mono text-sm bg-muted/50"
-                  />
+              <div className="relative">
+                {/* Selectable text display for reading/feedback */}
+                <div
+                  className="min-h-[400px] max-h-[600px] overflow-y-auto font-mono text-sm p-3 border rounded-md bg-background whitespace-pre-wrap cursor-text select-text"
+                  onMouseUp={handleTextSelection}
+                >
+                  {finalDraft || (isGenerating && (
+                    <span className="text-muted-foreground">
+                      {language === 'fr' ? 'Génération en cours...' : 'Generating...'}
+                    </span>
+                  ))}
                 </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-muted-foreground">
-                    {language === 'fr' ? 'Version finale' : 'Final Version'}
-                  </h4>
-                  <Textarea
-                    value={finalDraft}
-                    onChange={(e) => setFinalDraft(e.target.value)}
-                    className="min-h-[400px] font-mono text-sm"
-                    disabled={isGenerating}
+                
+                {/* Hint for text selection */}
+                {finalDraft && !isGenerating && (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    💡 {language === 'fr' 
+                      ? 'Sélectionnez du texte pour donner un commentaire ciblé' 
+                      : 'Select text to give targeted feedback'}
+                  </p>
+                )}
+                
+                {/* Selection feedback popover */}
+                {showSelectionPopover && (
+                  <SelectionFeedbackPopover
+                    selectedText={selectedText}
+                    position={popoverPosition}
+                    onAddFeedback={handleAddTargetedFeedback}
+                    onClose={() => setShowSelectionPopover(false)}
+                    language={language}
                   />
-                </div>
+                )}
               </div>
+            ) : (
+              <DiffView
+                original={draftText}
+                modified={finalDraft}
+                language={language}
+              />
             )}
 
             {isGenerating && (
