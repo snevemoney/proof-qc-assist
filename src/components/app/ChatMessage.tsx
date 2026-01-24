@@ -182,20 +182,20 @@ export const ChatMessage = ({
   return (
     <TooltipProvider>
       <div className={cn(
-        "group flex gap-3 p-4",
+        "group flex gap-2 sm:gap-3 p-3 sm:p-4",
         isUser ? "bg-muted/50" : "bg-background"
       )}>
         <div className={cn(
-          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
+          "flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
           isUser ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
         )}>
-          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+          {isUser ? <User className="h-3 w-3 sm:h-4 sm:w-4" /> : <Bot className="h-3 w-3 sm:h-4 sm:w-4" />}
         </div>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-medium">
                 {isUser ? translations.you : 'ProofCheck AI'}
               </span>
               
@@ -243,7 +243,7 @@ export const ChatMessage = ({
               {/* Timestamp with tooltip */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="text-xs text-muted-foreground cursor-default">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground cursor-default">
                     {formatRelativeTime(messageDate, language)}
                   </span>
                 </TooltipTrigger>
