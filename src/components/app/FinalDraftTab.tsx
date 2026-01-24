@@ -1,17 +1,16 @@
-import { useState } from 'react';
-import { Sparkles, Copy, Download, RefreshCw, Loader2, AlertCircle, User, Zap, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, Copy, Loader2, RefreshCw, Sparkles, User, Check, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWritingProfile, WritingProfile } from '@/hooks/useWritingProfile';
 import { useFinalDraft } from '@/hooks/useFinalDraft';
-import { Source, Claim, Intervention } from '@/lib/verification';
+import { Claim, Intervention, Source } from '@/lib/verification';
 import { toast } from 'sonner';
 
 interface FinalDraftTabProps {
@@ -23,20 +22,32 @@ interface FinalDraftTabProps {
   language: 'fr' | 'en';
 }
 
-export const FinalDraftTab = ({
-  draftText,
-  claims,
-  interventions,
-  sources,
+export const FinalDraftTab = ({ 
+  draftText, 
+  claims, 
+  interventions, 
+  sources, 
   hasVerified,
-  language,
+  language 
 }: FinalDraftTabProps) => {
-  const { t } = useLanguage();
   const { user } = useAuth();
-  const { profile, isLoading: profileLoading, isAnalyzing, analyzeStyle } = useWritingProfile();
-  const { finalDraft, setFinalDraft, isGenerating, error, generateFinalDraft, clearFinalDraft } = useFinalDraft();
+  const { 
+    profile, 
+    isLoading: profileLoading, 
+    isAnalyzing, 
+    analyzeStyle,
+    autoAnalyzeIfNeeded 
+  } = useWritingProfile();
+  const { finalDraft, isGenerating, error, generateFinalDraft, setFinalDraft } = useFinalDraft();
   const [viewMode, setViewMode] = useState<'final' | 'compare'>('final');
   const [copied, setCopied] = useState(false);
+
+  // Auto-analyze writing style when tab is viewed and no profile exists
+  useEffect(() => {
+    if (user && !profile && !profileLoading && !isAnalyzing && hasVerified) {
+      autoAnalyzeIfNeeded(language);
+    }
+  }, [user, profile, profileLoading, isAnalyzing, hasVerified, language, autoAnalyzeIfNeeded]);
 
   const issuesCount = claims.filter(c => c.status !== 'supported').length +
     interventions.filter(i => !i.hasEvidence || !i.hasRationale).length;
@@ -90,6 +101,28 @@ export const FinalDraftTab = ({
   };
 
   const renderProfileCard = (profileData: WritingProfile | null) => {
+    // Show analyzing state when auto-analyzing
+    if (isAnalyzing && !profileData) {
+      return (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="h-4 w-4" />
+              {language === 'fr' ? 'Profil d\'écriture' : 'Writing Profile'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">
+                {language === 'fr' ? 'Apprentissage de votre style d\'écriture...' : 'Learning your writing style...'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     if (profileLoading) {
       return (
         <Card>
@@ -112,43 +145,30 @@ export const FinalDraftTab = ({
             </CardTitle>
             <CardDescription>
               {language === 'fr' 
-                ? 'Analysez vos textes pour que l\'IA reproduise votre style unique.'
-                : 'Analyze your texts so AI can reproduce your unique style.'}
+                ? 'Votre style sera analysé automatiquement.'
+                : 'Your style will be analyzed automatically.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={handleAnalyzeStyle} 
-              disabled={isAnalyzing}
-              variant="outline"
-              className="w-full gap-2"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {language === 'fr' ? 'Analyse en cours...' : 'Analyzing...'}
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4" />
-                  {language === 'fr' ? 'Analyser mon style' : 'Analyze My Style'}
-                </>
-              )}
-            </Button>
+            <p className="text-sm text-muted-foreground">
+              {language === 'fr'
+                ? 'Le système apprendra votre style pour générer une version finale qui vous ressemble.'
+                : 'The system will learn your style to generate a final version that sounds like you.'}
+            </p>
           </CardContent>
         </Card>
       );
     }
 
-    const confidencePercent = Math.round(profileData.confidence_score * 100);
+    const confidencePercent = Math.round((profileData.confidence_score ?? 0) * 100);
 
     return (
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <User className="h-4 w-4" />
-              {language === 'fr' ? 'Votre profil d\'écriture' : 'Your Writing Profile'}
+              <UserCheck className="h-4 w-4 text-green-500" />
+              {language === 'fr' ? 'Profil appris' : 'Profile Learned'}
             </CardTitle>
             <Badge variant={confidencePercent >= 70 ? 'default' : confidencePercent >= 40 ? 'secondary' : 'outline'}>
               {confidencePercent}% {language === 'fr' ? 'confiance' : 'confidence'}
@@ -161,19 +181,19 @@ export const FinalDraftTab = ({
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
               <span className="text-muted-foreground">{language === 'fr' ? 'Vocabulaire:' : 'Vocabulary:'}</span>
-              <span className="ml-1 font-medium capitalize">{profileData.vocabulary_level}</span>
+              <span className="ml-1 font-medium capitalize">{profileData.vocabulary_level || 'moderate'}</span>
             </div>
             <div>
               <span className="text-muted-foreground">{language === 'fr' ? 'Formalité:' : 'Formality:'}</span>
-              <span className="ml-1 font-medium capitalize">{profileData.formality_level}</span>
+              <span className="ml-1 font-medium capitalize">{profileData.formality_level || 'academic'}</span>
             </div>
             <div>
               <span className="text-muted-foreground">{language === 'fr' ? 'Phrases ~' : 'Sentences ~'}</span>
-              <span className="ml-1 font-medium">{Math.round(profileData.avg_sentence_length)} {language === 'fr' ? 'mots' : 'words'}</span>
+              <span className="ml-1 font-medium">{Math.round(profileData.avg_sentence_length ?? 15)} {language === 'fr' ? 'mots' : 'words'}</span>
             </div>
             <div>
               <span className="text-muted-foreground">{language === 'fr' ? 'Échantillons:' : 'Samples:'}</span>
-              <span className="ml-1 font-medium">{profileData.samples_analyzed}</span>
+              <span className="ml-1 font-medium">{profileData.samples_analyzed ?? 0}</span>
             </div>
           </div>
 
@@ -282,7 +302,7 @@ export const FinalDraftTab = ({
               )}
             </Button>
             
-            {profile && profile.confidence_score >= 0.5 && (
+            {profile && (profile.confidence_score ?? 0) >= 0.5 && (
               <p className="text-xs text-muted-foreground text-center mt-2">
                 ✨ {language === 'fr' ? 'Le résultat correspondra à votre style' : 'Result will match your style'}
               </p>
@@ -304,17 +324,23 @@ export const FinalDraftTab = ({
       {(finalDraft || isGenerating) && (
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'final' | 'compare')}>
-                <TabsList>
-                  <TabsTrigger value="final">
-                    {language === 'fr' ? 'Version finale' : 'Final Version'}
-                  </TabsTrigger>
-                  <TabsTrigger value="compare">
-                    {language === 'fr' ? 'Comparer' : 'Compare'}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === 'final' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('final')}
+                >
+                  {language === 'fr' ? 'Version finale' : 'Final Version'}
+                </Button>
+                <Button
+                  variant={viewMode === 'compare' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('compare')}
+                >
+                  {language === 'fr' ? 'Comparer' : 'Compare'}
+                </Button>
+              </div>
 
               {finalDraft && !isGenerating && (
                 <div className="flex items-center gap-2">
@@ -371,7 +397,7 @@ export const FinalDraftTab = ({
             {isGenerating && (
               <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                {profile && profile.confidence_score >= 0.3
+                {profile && (profile.confidence_score ?? 0) >= 0.3
                   ? (language === 'fr' ? 'Adaptation à votre style en cours...' : 'Adapting to your style...')
                   : (language === 'fr' ? 'Génération en cours...' : 'Generating...')
                 }

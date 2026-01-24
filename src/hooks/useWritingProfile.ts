@@ -1,23 +1,23 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface WritingProfile {
   id: string;
   user_id: string;
-  vocabulary_level: string;
-  avg_sentence_length: number;
-  avg_paragraph_length: number;
-  uses_contractions: boolean;
-  formality_level: string;
-  preferred_voice: string;
-  transition_phrases: string[];
-  opening_patterns: string[];
-  closing_patterns: string[];
-  primary_language: string;
-  quebec_french_markers: boolean;
-  samples_analyzed: number;
-  confidence_score: number;
+  vocabulary_level: string | null;
+  avg_sentence_length: number | null;
+  avg_paragraph_length: number | null;
+  uses_contractions: boolean | null;
+  formality_level: string | null;
+  preferred_voice: string | null;
+  transition_phrases: string[] | null;
+  opening_patterns: string[] | null;
+  closing_patterns: string[] | null;
+  primary_language: string | null;
+  quebec_french_markers: boolean | null;
+  samples_analyzed: number | null;
+  confidence_score: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -25,29 +25,40 @@ export interface WritingProfile {
 export const useWritingProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<WritingProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const lastAnalysisRef = useRef<number>(0);
 
   // Fetch the user's writing profile
   const fetchProfile = useCallback(async () => {
     if (!user) {
       setProfile(null);
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('user_writing_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching writing profile:', error);
+        return;
       }
 
-      setProfile(data as WritingProfile | null);
+      if (data) {
+        setProfile({
+          ...data,
+          transition_phrases: data.transition_phrases as string[] | null,
+          opening_patterns: data.opening_patterns as string[] | null,
+          closing_patterns: data.closing_patterns as string[] | null,
+        });
+      } else {
+        setProfile(null);
+      }
     } catch (error) {
       console.error('Error fetching writing profile:', error);
     } finally {
@@ -58,8 +69,16 @@ export const useWritingProfile = () => {
   // Analyze writing style from user's texts
   const analyzeStyle = useCallback(async (language: 'fr' | 'en'): Promise<boolean> => {
     if (!user) return false;
+    
+    // Prevent rapid re-analysis (within 30 seconds)
+    const now = Date.now();
+    if (now - lastAnalysisRef.current < 30000) {
+      return false;
+    }
 
     setIsAnalyzing(true);
+    lastAnalysisRef.current = now;
+
     try {
       const { data, error } = await supabase.functions.invoke('analyze-writing-style', {
         body: { language },
@@ -85,6 +104,18 @@ export const useWritingProfile = () => {
       setIsAnalyzing(false);
     }
   }, [user, fetchProfile]);
+
+  // Auto-analyze if no profile exists or confidence is low (silent, non-blocking)
+  const autoAnalyzeIfNeeded = useCallback(async (language: 'fr' | 'en'): Promise<void> => {
+    if (!user) return;
+    if (isAnalyzing) return;
+    
+    // Skip if profile exists with good confidence (>= 30%)
+    if (profile && (profile.confidence_score ?? 0) >= 0.3) return;
+    
+    // Trigger silent background analysis
+    await analyzeStyle(language);
+  }, [user, profile, isAnalyzing, analyzeStyle]);
 
   // Delete the writing profile
   const deleteProfile = useCallback(async (): Promise<boolean> => {
@@ -118,6 +149,7 @@ export const useWritingProfile = () => {
     isLoading,
     isAnalyzing,
     analyzeStyle,
+    autoAnalyzeIfNeeded,
     deleteProfile,
     refreshProfile: fetchProfile,
   };
