@@ -5,6 +5,7 @@ import { SourcesTab } from './SourcesTab';
 import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
 import { ChatPanel } from './ChatPanel';
+import { OnboardingModal } from './OnboardingModal';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
@@ -226,6 +227,9 @@ const ProjectWorkspaceContent = () => {
       
       {/* Chat Panel */}
       <ChatPanel />
+      
+      {/* Onboarding Modal for new users */}
+      <OnboardingModal />
     </div>
   );
 };

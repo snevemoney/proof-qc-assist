@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Search, X, HelpCircle } from 'lucide-react';
+import { Search, X, HelpCircle, Lightbulb } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Tooltip,
@@ -11,6 +11,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface PICOSearchFormProps {
   onSearch: (query: string, action: 'find-sources') => void;
@@ -27,6 +34,64 @@ interface PICOField {
   tooltip: string;
   tooltipFr: string;
 }
+
+interface PICOExample {
+  id: string;
+  nameEn: string;
+  nameFr: string;
+  population: string;
+  intervention: string;
+  comparison: string;
+  outcome: string;
+}
+
+const PICO_EXAMPLES: PICOExample[] = [
+  {
+    id: 'mobility',
+    nameEn: 'Early Mobilization (ICU)',
+    nameFr: 'Mobilisation précoce (soins intensifs)',
+    population: 'ICU patients on mechanical ventilation',
+    intervention: 'early mobilization protocol',
+    comparison: 'standard bed rest',
+    outcome: 'reduced hospital-acquired pneumonia',
+  },
+  {
+    id: 'diabetes-foot',
+    nameEn: 'Diabetic Foot Care Education',
+    nameFr: 'Éducation soins des pieds diabétiques',
+    population: 'adults with type 2 diabetes',
+    intervention: 'structured foot care education program',
+    comparison: 'standard care',
+    outcome: 'reduced amputation rates',
+  },
+  {
+    id: 'falls',
+    nameEn: 'Fall Prevention (Elderly)',
+    nameFr: 'Prévention des chutes (aînés)',
+    population: 'hospitalized elderly patients over 65',
+    intervention: 'multicomponent fall prevention program',
+    comparison: 'usual care',
+    outcome: 'reduced fall incidence',
+  },
+  {
+    id: 'pain',
+    nameEn: 'Non-Pharmacological Pain Management',
+    nameFr: 'Gestion non-pharmacologique de la douleur',
+    population: 'post-surgical patients',
+    intervention: 'music therapy combined with guided imagery',
+    comparison: 'standard pain medication only',
+    outcome: 'reduced pain scores and opioid use',
+  },
+  {
+    id: 'hand-hygiene',
+    nameEn: 'Hand Hygiene Compliance',
+    nameFr: 'Conformité hygiène des mains',
+    population: 'healthcare workers in acute care',
+    intervention: 'electronic monitoring with feedback',
+    comparison: 'traditional observation audits',
+    outcome: 'improved hand hygiene compliance rates',
+  },
+];
 
 const PICO_FIELDS: PICOField[] = [
   {
@@ -80,6 +145,18 @@ export const PICOSearchForm = ({ onSearch, onClose, disabled }: PICOSearchFormPr
     setValues(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleExampleSelect = (exampleId: string) => {
+    const example = PICO_EXAMPLES.find(e => e.id === exampleId);
+    if (example) {
+      setValues({
+        population: example.population,
+        intervention: example.intervention,
+        comparison: example.comparison,
+        outcome: example.outcome,
+      });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -129,6 +206,26 @@ export const PICOSearchForm = ({ onSearch, onClose, disabled }: PICOSearchFormPr
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Nursing Examples Dropdown */}
+          <div className="mb-4">
+            <Label className="text-xs flex items-center gap-1 mb-1.5">
+              <Lightbulb className="h-3 w-3 text-amber-500" />
+              {language === 'fr' ? 'Exemples en sciences infirmières' : 'Nursing Examples'}
+            </Label>
+            <Select onValueChange={handleExampleSelect}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder={language === 'fr' ? 'Choisir un exemple...' : 'Choose an example...'} />
+              </SelectTrigger>
+              <SelectContent>
+                {PICO_EXAMPLES.map((example) => (
+                  <SelectItem key={example.id} value={example.id} className="text-xs">
+                    {language === 'fr' ? example.nameFr : example.nameEn}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <TooltipProvider>
             {PICO_FIELDS.map((field) => (
               <div key={field.key} className="space-y-1">
