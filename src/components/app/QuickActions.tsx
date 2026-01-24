@@ -1,4 +1,4 @@
-import { Lightbulb, Search, BookOpen, PenTool, GraduationCap, HeartPulse, Stethoscope, ClipboardCheck, BarChart3 } from 'lucide-react';
+import { Lightbulb, Search, BookOpen, PenTool, GraduationCap, HeartPulse, Stethoscope, ClipboardCheck, BarChart3, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -29,6 +29,17 @@ export const QuickActions = ({
       requiresInstructions: false,
       requiresEvaluationGrid: false,
       primary: true,
+    },
+    {
+      icon: Database,
+      label: language === 'fr' ? 'Chercher bases de données' : 'Search databases',
+      message: language === 'fr'
+        ? 'Aide-moi à trouver des sources dans les bases de données infirmières (PubMed, CINAHL, Cochrane, INESSS, OIIQ, Santékom). Cherche des articles pertinents pour mon sujet de travail.'
+        : 'Help me find sources in nursing databases (PubMed, CINAHL, Cochrane, INESSS, OIIQ, Santékom). Search for articles relevant to my assignment topic.',
+      action: 'research' as const,
+      requiresResults: false,
+      requiresInstructions: false,
+      requiresEvaluationGrid: false,
     },
     {
       icon: ClipboardCheck,
