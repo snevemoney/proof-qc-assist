@@ -9,6 +9,14 @@ export interface GenerateFinalDraftParams {
   interventions: Intervention[];
   sources: Source[];
   language: 'fr' | 'en';
+  feedback?: string;
+  previousVersion?: string;
+}
+
+export interface DraftVersion {
+  text: string;
+  feedback?: string;
+  timestamp: Date;
 }
 
 export const useFinalDraft = () => {
@@ -16,6 +24,8 @@ export const useFinalDraft = () => {
   const [finalDraft, setFinalDraft] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [versions, setVersions] = useState<DraftVersion[]>([]);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
 
   const generateFinalDraft = useCallback(async (params: GenerateFinalDraftParams): Promise<boolean> => {
     if (!user) {
@@ -69,6 +79,8 @@ export const useFinalDraft = () => {
               year: s.year,
             })),
             language: params.language,
+            feedback: params.feedback,
+            previousVersion: params.previousVersion,
           }),
         }
       );
@@ -118,6 +130,14 @@ export const useFinalDraft = () => {
         }
       }
 
+      // Save to version history
+      setVersions(prev => [...prev, { 
+        text: fullText, 
+        feedback: params.feedback,
+        timestamp: new Date() 
+      }]);
+      setCurrentVersionIndex(prev => prev + 1);
+
       return true;
     } catch (err) {
       console.error('Error generating final draft:', err);
@@ -128,9 +148,40 @@ export const useFinalDraft = () => {
     }
   }, [user]);
 
+  const regenerateWithFeedback = useCallback(async (
+    feedback: string,
+    params: Omit<GenerateFinalDraftParams, 'feedback' | 'previousVersion'>
+  ): Promise<boolean> => {
+    if (!finalDraft) return false;
+    
+    return generateFinalDraft({
+      ...params,
+      feedback,
+      previousVersion: finalDraft,
+    });
+  }, [finalDraft, generateFinalDraft]);
+
+  const goToPreviousVersion = useCallback(() => {
+    if (currentVersionIndex > 0) {
+      const prevIndex = currentVersionIndex - 1;
+      setCurrentVersionIndex(prevIndex);
+      setFinalDraft(versions[prevIndex].text);
+    }
+  }, [currentVersionIndex, versions]);
+
+  const goToNextVersion = useCallback(() => {
+    if (currentVersionIndex < versions.length - 1) {
+      const nextIndex = currentVersionIndex + 1;
+      setCurrentVersionIndex(nextIndex);
+      setFinalDraft(versions[nextIndex].text);
+    }
+  }, [currentVersionIndex, versions]);
+
   const clearFinalDraft = useCallback(() => {
     setFinalDraft('');
     setError(null);
+    setVersions([]);
+    setCurrentVersionIndex(-1);
   }, []);
 
   return {
@@ -139,6 +190,11 @@ export const useFinalDraft = () => {
     isGenerating,
     error,
     generateFinalDraft,
+    regenerateWithFeedback,
     clearFinalDraft,
+    versions,
+    currentVersionIndex,
+    goToPreviousVersion,
+    goToNextVersion,
   };
 };
