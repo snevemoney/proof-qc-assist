@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ChatMessage } from './ChatMessage';
 import { QuickActions } from './QuickActions';
 import { PICOSearchForm } from './PICOSearchForm';
+import { NursingDatabaseLinks } from './NursingDatabaseLinks';
 import { cn } from '@/lib/utils';
 
 export const ChatPanel = () => {
@@ -134,6 +135,9 @@ export const ChatPanel = () => {
               </div>
             )}
           </ScrollArea>
+
+          {/* Nursing Database Links */}
+          <NursingDatabaseLinks />
 
           {showPICO ? (
             <div className="p-4 border-t border-border">
