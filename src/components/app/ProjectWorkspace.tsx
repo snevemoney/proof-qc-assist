@@ -192,10 +192,15 @@ const ProjectWorkspaceContent = () => {
         hasVerified: true,
       });
       
-      // Increased delay before tab switch to let dialogs properly unmount
+      // Blur any focused tooltip triggers to force-close tooltips before tab switch
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      
+      // Increased delay before tab switch to let portals properly unmount
       setTimeout(() => {
         setActiveTab('report');
-      }, 150);
+      }, 300);
       
       console.log('handleVerify: State updated and saved');
 
