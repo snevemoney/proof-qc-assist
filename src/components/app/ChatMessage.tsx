@@ -1,18 +1,21 @@
-import { useState } from 'react';
-import { Bot, User, Pencil, Check, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bot, User, Pencil, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import type { ChatMessage as ChatMessageType } from '@/hooks/useChatMessages';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import type { ChatMessage as ChatMessageType, MessageVersion } from '@/hooks/useChatMessages';
 import { ArticleSuggestionCard, type ArticleResult } from './ArticleSuggestionCard';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { formatRelativeTime, formatFullDateTime } from '@/lib/formatRelativeTime';
 
 interface ChatMessageProps {
-  message: ChatMessageType | { id: string; role: 'user' | 'assistant'; content: string; timestamp?: Date; isStreaming?: boolean };
+  message: ChatMessageType | { id: string; role: 'user' | 'assistant'; content: string; timestamp?: Date; isStreaming?: boolean; createdAt?: Date; isEdited?: boolean; parentMessageId?: string | null };
   onAddArticle?: (article: ArticleResult) => void;
   addedArticleIds?: Set<string>;
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   isEditing?: boolean;
+  onGetEditHistory?: (messageId: string) => Promise<MessageVersion[]>;
 }
 
 // Parse message content for embedded article JSON
@@ -65,18 +68,75 @@ export const ChatMessage = ({
   onAddArticle, 
   addedArticleIds,
   onEditMessage,
-  isEditing: externalEditing = false
+  isEditing: externalEditing = false,
+  onGetEditHistory
 }: ChatMessageProps) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const isUser = message.role === 'user';
   const [isEditing, setIsEditing] = useState(externalEditing);
   const [editContent, setEditContent] = useState(message.content);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Edit history state
+  const [editHistory, setEditHistory] = useState<MessageVersion[]>([]);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(0);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [displayContent, setDisplayContent] = useState(message.content);
+  
+  // Determine if message was edited
+  const isEdited = 'isEdited' in message && message.isEdited;
+  const hasParent = 'parentMessageId' in message && message.parentMessageId;
+  const showEditedBadge = isEdited || hasParent;
+  
+  // Get message timestamp
+  const messageDate = 'createdAt' in message && message.createdAt 
+    ? message.createdAt 
+    : ('timestamp' in message && message.timestamp ? message.timestamp : new Date());
+  
   // Parse articles from assistant messages
   const { textContent, articles } = isUser 
-    ? { textContent: message.content, articles: [] }
-    : parseArticlesFromContent(message.content);
+    ? { textContent: displayContent, articles: [] }
+    : parseArticlesFromContent(displayContent);
+
+  // Update display content when message content changes
+  useEffect(() => {
+    setDisplayContent(message.content);
+    setCurrentVersionIndex(editHistory.length > 0 ? editHistory.length - 1 : 0);
+  }, [message.content, editHistory.length]);
+
+  // Load edit history when user clicks to view versions
+  const loadEditHistory = async () => {
+    if (!onGetEditHistory || isLoadingHistory || editHistory.length > 0) return;
+    
+    setIsLoadingHistory(true);
+    try {
+      const history = await onGetEditHistory(message.id);
+      if (history.length > 1) {
+        setEditHistory(history);
+        setCurrentVersionIndex(history.length - 1);
+      }
+    } catch (error) {
+      console.error('Error loading edit history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const goToPreviousVersion = () => {
+    if (currentVersionIndex > 0) {
+      const newIndex = currentVersionIndex - 1;
+      setCurrentVersionIndex(newIndex);
+      setDisplayContent(editHistory[newIndex].content);
+    }
+  };
+
+  const goToNextVersion = () => {
+    if (currentVersionIndex < editHistory.length - 1) {
+      const newIndex = currentVersionIndex + 1;
+      setCurrentVersionIndex(newIndex);
+      setDisplayContent(editHistory[newIndex].content);
+    }
+  };
 
   const handleStartEdit = () => {
     setEditContent(message.content);
@@ -105,106 +165,180 @@ export const ChatMessage = ({
     }
   };
 
-  const t = {
+  const translations = {
     you: language === 'fr' ? 'Vous' : 'You',
     edit: language === 'fr' ? 'Modifier' : 'Edit',
     save: language === 'fr' ? 'Enregistrer et régénérer' : 'Save & Regenerate',
     cancel: language === 'fr' ? 'Annuler' : 'Cancel',
+    edited: t('chat.edited'),
     articlesFound: (count: number) => language === 'fr' 
       ? `${count} article(s) trouvé(s):`
       : `${count} article(s) found:`,
   };
+
+  const hasMultipleVersions = editHistory.length > 1;
+  const isViewingOldVersion = hasMultipleVersions && currentVersionIndex < editHistory.length - 1;
   
   return (
-    <div className={cn(
-      "flex gap-3 p-4",
-      isUser ? "bg-muted/50" : "bg-background"
-    )}>
+    <TooltipProvider>
       <div className={cn(
-        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-        isUser ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+        "group flex gap-3 p-4",
+        isUser ? "bg-muted/50" : "bg-background"
       )}>
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-      </div>
-      
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1">
-          <div className="text-sm font-medium">
-            {isUser ? t.you : 'ProofCheck AI'}
-          </div>
-          {isUser && onEditMessage && !isEditing && !('isStreaming' in message && message.isStreaming) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleStartEdit}
-            >
-              <Pencil className="h-3 w-3 mr-1" />
-              {t.edit}
-            </Button>
-          )}
+        <div className={cn(
+          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
+          isUser ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+        )}>
+          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
         </div>
-
-        {isEditing ? (
-          <div className="space-y-2">
-            <Textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="min-h-[80px] text-sm"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') handleCancelEdit();
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEdit();
-              }}
-            />
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelEdit}
-                disabled={isSaving}
-              >
-                <X className="h-3 w-3 mr-1" />
-                {t.cancel}
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSaveEdit}
-                disabled={isSaving || editContent.trim() === message.content}
-              >
-                <Check className="h-3 w-3 mr-1" />
-                {t.save}
-              </Button>
+              <span className="text-sm font-medium">
+                {isUser ? translations.you : 'ProofCheck AI'}
+              </span>
+              
+              {/* Edit history navigation */}
+              {showEditedBadge && isUser && (
+                <div className="flex items-center gap-1">
+                  {hasMultipleVersions ? (
+                    <div className="flex items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                        onClick={goToPreviousVersion}
+                        disabled={currentVersionIndex === 0}
+                      >
+                        <ChevronLeft className="h-3 w-3" />
+                      </Button>
+                      <span className="text-xs text-muted-foreground min-w-[2.5rem] text-center">
+                        {currentVersionIndex + 1}/{editHistory.length}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                        onClick={goToNextVersion}
+                        disabled={currentVersionIndex === editHistory.length - 1}
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={loadEditHistory}
+                      disabled={isLoadingHistory}
+                    >
+                      {translations.edited}
+                    </Button>
+                  )}
+                </div>
+              )}
+              
+              {/* Timestamp with tooltip */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs text-muted-foreground cursor-default">
+                    {formatRelativeTime(messageDate, language)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {formatFullDateTime(messageDate, language)}
+                </TooltipContent>
+              </Tooltip>
             </div>
-          </div>
-        ) : (
-          <div className="text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none">
-            {isUser ? message.content : textContent}
-            {'isStreaming' in message && message.isStreaming && (
-              <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+            
+            {isUser && onEditMessage && !isEditing && !('isStreaming' in message && message.isStreaming) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handleStartEdit}
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                {translations.edit}
+              </Button>
             )}
           </div>
-        )}
-        
-        {/* Render article suggestions if present */}
-        {articles.length > 0 && !isEditing && (
-          <div className="mt-4 space-y-3">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t.articlesFound(articles.length)}
-            </p>
-            <div className="grid gap-3">
-              {articles.map((article) => (
-                <ArticleSuggestionCard
-                  key={article.id}
-                  article={article}
-                  onAddToSources={onAddArticle || (() => {})}
-                  isAdded={addedArticleIds?.has(article.id)}
-                />
-              ))}
+
+          {isViewingOldVersion && (
+            <div className="text-xs text-muted-foreground italic mb-2">
+              {language === 'fr' 
+                ? `Affichage de la version ${currentVersionIndex + 1} sur ${editHistory.length}`
+                : `Viewing version ${currentVersionIndex + 1} of ${editHistory.length}`
+              }
             </div>
-          </div>
-        )}
+          )}
+
+          {isEditing ? (
+            <div className="space-y-2">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[80px] text-sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') handleCancelEdit();
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEdit();
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={isSaving}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  {translations.cancel}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  disabled={isSaving || editContent.trim() === message.content}
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  {translations.save}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className={cn(
+              "text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none",
+              isViewingOldVersion && "opacity-70"
+            )}>
+              {isUser ? displayContent : textContent}
+              {'isStreaming' in message && message.isStreaming && (
+                <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+              )}
+            </div>
+          )}
+          
+          {/* Render article suggestions if present */}
+          {articles.length > 0 && !isEditing && (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                {translations.articlesFound(articles.length)}
+              </p>
+              <div className="grid gap-3">
+                {articles.map((article) => (
+                  <ArticleSuggestionCard
+                    key={article.id}
+                    article={article}
+                    onAddToSources={onAddArticle || (() => {})}
+                    isAdded={addedArticleIds?.has(article.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };

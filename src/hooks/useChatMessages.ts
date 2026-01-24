@@ -11,6 +11,13 @@ export interface ChatMessage {
   isActive: boolean;
   createdAt: Date;
   isStreaming?: boolean;
+  isEdited?: boolean; // Has a parent_message_id (meaning it's an edit)
+}
+
+export interface MessageVersion {
+  id: string;
+  content: string;
+  createdAt: Date;
 }
 
 const LOCAL_MESSAGES_KEY = 'proofcheck-chat-messages';
@@ -49,6 +56,7 @@ export const useChatMessages = (sessionId: string | null) => {
             parentMessageId: m.parent_message_id,
             isActive: m.is_active,
             createdAt: new Date(m.created_at),
+            isEdited: !!m.parent_message_id,
           }));
           setMessages(loadedMessages);
         }
@@ -238,6 +246,7 @@ export const useChatMessages = (sessionId: string | null) => {
         parentMessageId: newMessage.parent_message_id,
         isActive: newMessage.is_active,
         createdAt: new Date(newMessage.created_at),
+        isEdited: true,
       };
 
       // Update local state: remove subsequent messages, replace target with edited
@@ -255,6 +264,7 @@ export const useChatMessages = (sessionId: string | null) => {
         content: newContent,
         parentMessageId: targetMessage.id,
         createdAt: new Date(),
+        isEdited: true,
       };
 
       setMessages(prev => {
@@ -301,6 +311,42 @@ export const useChatMessages = (sessionId: string | null) => {
       }));
   }, [messages]);
 
+  // Get edit history for a message by traversing parent_message_id chain
+  const getMessageEditHistory = useCallback(async (messageId: string): Promise<MessageVersion[]> => {
+    if (!user) {
+      // For anonymous users, we don't store edit history
+      return [];
+    }
+
+    const versions: MessageVersion[] = [];
+    let currentId: string | null = messageId;
+
+    // First, get the current message
+    const currentMessage = messages.find(m => m.id === messageId);
+    if (!currentMessage) return [];
+
+    // Walk up the parent chain to find all previous versions
+    while (currentId) {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('id, content, created_at, parent_message_id')
+        .eq('id', currentId)
+        .single();
+
+      if (error || !data) break;
+
+      versions.unshift({
+        id: data.id,
+        content: data.content,
+        createdAt: new Date(data.created_at),
+      });
+
+      currentId = data.parent_message_id;
+    }
+
+    return versions;
+  }, [user, messages]);
+
   return {
     messages,
     setMessages,
@@ -310,6 +356,7 @@ export const useChatMessages = (sessionId: string | null) => {
     editMessageAndFork,
     clearMessages,
     getMessagesForAPI,
+    getMessageEditHistory,
     isLoading: isLoading || authLoading,
   };
 };

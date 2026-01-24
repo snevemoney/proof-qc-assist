@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          edit_count: number | null
           id: string
           is_active: boolean | null
           parent_message_id: string | null
@@ -28,6 +29,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          edit_count?: number | null
           id?: string
           is_active?: boolean | null
           parent_message_id?: string | null
@@ -38,6 +40,7 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          edit_count?: number | null
           id?: string
           is_active?: boolean | null
           parent_message_id?: string | null
