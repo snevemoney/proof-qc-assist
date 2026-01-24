@@ -28,16 +28,18 @@ export interface UseFinalDraftOptions {
 
 export const useFinalDraft = (options: UseFinalDraftOptions) => {
   const { user } = useAuth();
-  const { finalDraft, setFinalDraft, versions, setVersions } = options;
+  // Defensive fallback to prevent crashes if versions is undefined
+  const { finalDraft, setFinalDraft, versions = [], setVersions } = options;
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Calculate current version index from versions array
   const currentVersionIndex = useMemo(() => {
-    if (versions.length === 0) return -1;
+    const safeVersions = versions || [];
+    if (safeVersions.length === 0) return -1;
     // Find the index of the version matching current finalDraft
-    const idx = versions.findIndex(v => v.text === finalDraft);
-    return idx >= 0 ? idx : versions.length - 1;
+    const idx = safeVersions.findIndex(v => v.text === finalDraft);
+    return idx >= 0 ? idx : safeVersions.length - 1;
   }, [versions, finalDraft]);
 
   const generateFinalDraft = useCallback(async (params: GenerateFinalDraftParams): Promise<boolean> => {
