@@ -64,6 +64,9 @@ const translations = {
     'report.exportPdf': 'Export PDF',
     'report.copyMarkdown': 'Copy Markdown',
     'report.claimAnalysis': 'Claim-by-Claim Analysis',
+    'report.noClaims': 'No claims identified.',
+    'report.evidence': 'Evidence',
+    'report.suggestion': 'Suggestion',
     'report.askAboutClaim': 'Ask AI',
     'report.findArticles': 'Find articles',
     
@@ -162,6 +165,9 @@ const translations = {
     'report.exportPdf': 'Exporter PDF',
     'report.copyMarkdown': 'Copier Markdown',
     'report.claimAnalysis': 'Analyse affirmation par affirmation',
+    'report.noClaims': 'Aucune affirmation identifiée.',
+    'report.evidence': 'Preuve',
+    'report.suggestion': 'Suggestion',
     'report.askAboutClaim': 'Demander à l\'IA',
     'report.findArticles': 'Trouver des articles',
     

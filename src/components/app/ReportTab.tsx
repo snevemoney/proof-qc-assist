@@ -496,7 +496,7 @@ export const ReportTab = ({
         <CardContent className="space-y-4">
           {claims.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              {language === 'fr' ? 'Aucune affirmation identifiée.' : 'No claims identified.'}
+              {t('report.noClaims')}
             </p>
           ) : (
             claims.map((claim) => {
