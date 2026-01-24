@@ -11,7 +11,6 @@ export interface ChatMessage {
   isActive: boolean;
   createdAt: Date;
   isStreaming?: boolean;
-  editCount: number;
 }
 
 const LOCAL_MESSAGES_KEY = 'proofcheck-chat-messages';
@@ -50,7 +49,6 @@ export const useChatMessages = (sessionId: string | null) => {
             parentMessageId: m.parent_message_id,
             isActive: m.is_active,
             createdAt: new Date(m.created_at),
-            editCount: m.edit_count || 0,
           }));
           setMessages(loadedMessages);
         }
@@ -65,7 +63,6 @@ export const useChatMessages = (sessionId: string | null) => {
               .map((m: any) => ({
                 ...m,
                 createdAt: new Date(m.createdAt),
-                editCount: m.editCount || 0,
               }));
             setMessages(loadedMessages);
           } catch (e) {
@@ -110,7 +107,6 @@ export const useChatMessages = (sessionId: string | null) => {
       isActive: true,
       createdAt: new Date(),
       isStreaming,
-      editCount: 0,
     };
 
     // Optimistically add to state
@@ -146,14 +142,13 @@ export const useChatMessages = (sessionId: string | null) => {
         isActive: data.is_active,
         createdAt: new Date(data.created_at),
         isStreaming,
-        editCount: data.edit_count || 0,
       };
 
       setMessages(prev => prev.map(m => m.id === tempId ? realMessage : m));
       return realMessage;
     } else {
       // For local storage, keep the temp ID
-      const localMessage = { ...newMessage, id: `local-msg-${Date.now()}`, editCount: 0 };
+      const localMessage = { ...newMessage, id: `local-msg-${Date.now()}` };
       setMessages(prev => prev.map(m => m.id === tempId ? localMessage : m));
       saveLocalMessages([...messages, localMessage]);
       return localMessage;
@@ -201,7 +196,6 @@ export const useChatMessages = (sessionId: string | null) => {
 
     const targetMessage = messages[messageIndex];
     const subsequentMessages = messages.slice(messageIndex + 1);
-    const newEditCount = (targetMessage.editCount || 0) + 1;
 
     if (user) {
       // Mark old message and subsequent messages as inactive
@@ -217,7 +211,7 @@ export const useChatMessages = (sessionId: string | null) => {
         }
       }
 
-      // Insert new edited message with incremented edit count
+      // Insert new edited message
       const { data: newMessage, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -227,7 +221,6 @@ export const useChatMessages = (sessionId: string | null) => {
           content: newContent,
           parent_message_id: targetMessage.id,
           is_active: true,
-          edit_count: newEditCount,
         })
         .select()
         .single();
@@ -245,7 +238,6 @@ export const useChatMessages = (sessionId: string | null) => {
         parentMessageId: newMessage.parent_message_id,
         isActive: newMessage.is_active,
         createdAt: new Date(newMessage.created_at),
-        editCount: newMessage.edit_count || 0,
       };
 
       // Update local state: remove subsequent messages, replace target with edited
@@ -263,7 +255,6 @@ export const useChatMessages = (sessionId: string | null) => {
         content: newContent,
         parentMessageId: targetMessage.id,
         createdAt: new Date(),
-        editCount: newEditCount,
       };
 
       setMessages(prev => {
