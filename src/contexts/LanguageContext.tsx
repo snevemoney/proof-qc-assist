@@ -14,6 +14,7 @@ const translations = {
     'tabs.sources': 'Sources',
     'tabs.draft': 'Draft',
     'tabs.report': 'Report',
+    'tabs.final': 'Final',
     
     // Upload
     'upload.dragDrop': 'Drag and drop files here',
@@ -159,6 +160,7 @@ const translations = {
     'tabs.sources': 'Sources',
     'tabs.draft': 'Brouillon',
     'tabs.report': 'Rapport',
+    'tabs.final': 'Version finale',
     
     // Upload
     'upload.dragDrop': 'Glissez-déposez vos fichiers ici',

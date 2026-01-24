@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { FileText, Edit3, BarChart3, Loader2, ClipboardList } from 'lucide-react';
+import { FileText, Edit3, BarChart3, Loader2, ClipboardList, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SourcesTab } from './SourcesTab';
 import { DraftTab } from './DraftTab';
 import { ReportTab } from './ReportTab';
 import { RequirementsTab } from './RequirementsTab';
+import { FinalDraftTab } from './FinalDraftTab';
 import { ChatPanel } from './ChatPanel';
 import { OnboardingModal } from './OnboardingModal';
 import { ReadinessIndicator } from './ReadinessIndicator';
@@ -330,7 +331,7 @@ const ProjectWorkspaceContent = () => {
       />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-xl grid-cols-4 h-auto">
+        <TabsList className="grid w-full max-w-2xl grid-cols-5 h-auto">
           <TabsTrigger value="sources" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
             <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="truncate">{t('tabs.sources')}</span>
@@ -347,6 +348,10 @@ const ProjectWorkspaceContent = () => {
           <TabsTrigger value="report" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
             <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="truncate">{t('tabs.report')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="final" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
+            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">{t('tabs.final')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -403,6 +408,17 @@ const ProjectWorkspaceContent = () => {
               onOpenAuthModal={() => setAuthModalOpen(true)}
               verificationLanguage={verificationLanguage}
               onReverify={handleVerify}
+            />
+          </TabsContent>
+
+          <TabsContent value="final" className="mt-0">
+            <FinalDraftTab
+              draftText={draftText}
+              claims={claims}
+              interventions={interventions}
+              sources={sources}
+              hasVerified={hasVerified}
+              language={language}
             />
           </TabsContent>
         </div>

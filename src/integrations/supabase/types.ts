@@ -313,6 +313,66 @@ export type Database = {
         }
         Relationships: []
       }
+      user_writing_profiles: {
+        Row: {
+          avg_paragraph_length: number | null
+          avg_sentence_length: number | null
+          closing_patterns: Json | null
+          confidence_score: number | null
+          created_at: string
+          formality_level: string | null
+          id: string
+          opening_patterns: Json | null
+          preferred_voice: string | null
+          primary_language: string | null
+          quebec_french_markers: boolean | null
+          samples_analyzed: number | null
+          transition_phrases: Json | null
+          updated_at: string
+          user_id: string
+          uses_contractions: boolean | null
+          vocabulary_level: string | null
+        }
+        Insert: {
+          avg_paragraph_length?: number | null
+          avg_sentence_length?: number | null
+          closing_patterns?: Json | null
+          confidence_score?: number | null
+          created_at?: string
+          formality_level?: string | null
+          id?: string
+          opening_patterns?: Json | null
+          preferred_voice?: string | null
+          primary_language?: string | null
+          quebec_french_markers?: boolean | null
+          samples_analyzed?: number | null
+          transition_phrases?: Json | null
+          updated_at?: string
+          user_id: string
+          uses_contractions?: boolean | null
+          vocabulary_level?: string | null
+        }
+        Update: {
+          avg_paragraph_length?: number | null
+          avg_sentence_length?: number | null
+          closing_patterns?: Json | null
+          confidence_score?: number | null
+          created_at?: string
+          formality_level?: string | null
+          id?: string
+          opening_patterns?: Json | null
+          preferred_voice?: string | null
+          primary_language?: string | null
+          quebec_french_markers?: boolean | null
+          samples_analyzed?: number | null
+          transition_phrases?: Json | null
+          updated_at?: string
+          user_id?: string
+          uses_contractions?: boolean | null
+          vocabulary_level?: string | null
+        }
+        Relationships: []
+      }
       verification_feedback: {
         Row: {
           accuracy_rating: number | null
