@@ -176,13 +176,13 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
         </ScrollArea>
       </div>
 
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 z-20"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* Overlay - always mounted with CSS visibility to avoid DOM race conditions */}
+      <div
+        className={`fixed inset-0 bg-black/20 z-20 transition-opacity ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsOpen(false)}
+      />
     </>
   );
 };
