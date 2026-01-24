@@ -202,11 +202,15 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                           },
                           evidence: { 
                             type: "string",
-                            description: "Direct quote or paraphrase from the source supporting or contradicting the claim"
+                            description: language === 'fr'
+                              ? "Citation directe ou paraphrase de la source soutenant ou contredisant l'affirmation. Rédigez en FRANÇAIS."
+                              : "Direct quote or paraphrase from the source supporting or contradicting the claim. Write in ENGLISH."
                           },
                           suggestion: { 
                             type: "string",
-                            description: "Helpful suggestion for the student on how to improve this claim"
+                            description: language === 'fr'
+                              ? "Suggestion utile pour l'étudiant sur comment améliorer cette affirmation. Rédigez en FRANÇAIS."
+                              : "Helpful suggestion for the student on how to improve this claim. Write in ENGLISH."
                           }
                         },
                         required: ["text", "status"],
@@ -241,11 +245,15 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                           },
                           rationaleText: {
                             type: "string",
-                            description: "The extracted rationale text if present"
+                            description: language === 'fr'
+                              ? "Le texte de justification extrait si présent. Rédigez en FRANÇAIS."
+                              : "The extracted rationale text if present. Write in ENGLISH."
                           },
                           suggestion: {
                             type: "string",
-                            description: "Helpful suggestion for the student if evidence or rationale is missing"
+                            description: language === 'fr'
+                              ? "Suggestion utile pour l'étudiant si la preuve ou la justification manque. Rédigez en FRANÇAIS."
+                              : "Helpful suggestion for the student if evidence or rationale is missing. Write in ENGLISH."
                           }
                         },
                         required: ["text", "severity", "hasEvidence", "hasRationale"],
@@ -260,7 +268,12 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                         partial: { type: "number" },
                         unsupported: { type: "number" },
                         contradicted: { type: "number" },
-                        overallFeedback: { type: "string" },
+                        overallFeedback: { 
+                          type: "string",
+                          description: language === 'fr'
+                            ? "Rétroaction globale pour l'étudiant. Résumez les forces et faiblesses du brouillon. Rédigez en FRANÇAIS."
+                            : "Overall feedback for the student. Summarize the strengths and weaknesses of the draft. Write in ENGLISH."
+                        },
                         totalInterventions: { type: "number" },
                         interventionsWithEvidence: { type: "number" },
                         interventionsWithRationale: { type: "number" }
