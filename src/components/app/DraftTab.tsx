@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Play, Upload, AlertCircle, Loader2, Save, FolderOpen, Trash2, FileText } from 'lucide-react';
+import { Play, Upload, AlertCircle, Loader2, Save, FolderOpen, Trash2, FileText, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +34,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { SavedDraft } from '@/hooks/useSavedDrafts';
+import { VerificationError } from '@/lib/verificationErrors';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -48,6 +50,8 @@ interface DraftTabProps {
   savedDraftsLoading: boolean;
   onSaveDraft: (name: string, content: string) => Promise<void>;
   onDeleteDraft: (id: string) => Promise<void>;
+  verificationError?: VerificationError | null;
+  retryCount?: number;
 }
 
 export const DraftTab = ({ 
@@ -62,6 +66,8 @@ export const DraftTab = ({
   savedDraftsLoading,
   onSaveDraft,
   onDeleteDraft,
+  verificationError,
+  retryCount = 0,
 }: DraftTabProps) => {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -300,78 +306,95 @@ export const DraftTab = ({
         </div>
       </div>
 
-      {/* Save Draft Dialog */}
-      {saveDialogOpen && (
-        <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t('draft.saveCurrent')}</DialogTitle>
-              <DialogDescription>
-                {t('draft.draftNamePlaceholder')}
-              </DialogDescription>
-            </DialogHeader>
-            <Input
-              value={draftName}
-              onChange={(e) => setDraftName(e.target.value)}
-              placeholder={t('draft.draftNamePlaceholder')}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && draftName.trim()) {
-                  handleSaveDraft();
-                }
-              }}
-            />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
-                Cancel
+      {/* Error Alert with Retry */}
+      {verificationError && !isVerifying && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+            <span className="flex-1">{verificationError.message}</span>
+            {verificationError.isRetryable && (
+              <Button variant="outline" size="sm" onClick={onVerify} className="gap-2">
+                <RotateCcw className="h-3 w-3" />
+                {t('draft.retry')}
               </Button>
-              <Button onClick={handleSaveDraft} disabled={!draftName.trim() || isSaving}>
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-                Save
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
-      {/* Load Confirmation Dialog */}
-      {loadConfirmOpen && (
-        <AlertDialog open={loadConfirmOpen} onOpenChange={setLoadConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t('draft.confirmLoad')}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t('draft.confirmLoadDescription')}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmLoadDraft}>
-                {t('draft.loadDraft')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      {/* Retry Progress Indicator */}
+      {isVerifying && retryCount > 0 && (
+        <div className="text-xs text-muted-foreground text-center mt-2">
+          {t('draft.retrying')} ({retryCount}/2)
+        </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      {deleteConfirmOpen && (
-        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t('draft.confirmDelete')}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t('draft.confirmDeleteDescription')}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {t('draft.deleteDraft')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      {/* Save Draft Dialog - Always mounted, controlled by open prop */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('draft.saveCurrent')}</DialogTitle>
+            <DialogDescription>
+              {t('draft.draftNamePlaceholder')}
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            placeholder={t('draft.draftNamePlaceholder')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && draftName.trim()) {
+                handleSaveDraft();
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveDraft} disabled={!draftName.trim() || isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load Confirmation Dialog - Always mounted, controlled by open prop */}
+      <AlertDialog open={loadConfirmOpen} onOpenChange={setLoadConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('draft.confirmLoad')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('draft.confirmLoadDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLoadDraft}>
+              {t('draft.loadDraft')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog - Always mounted, controlled by open prop */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('draft.confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('draft.confirmDeleteDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t('draft.deleteDraft')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
