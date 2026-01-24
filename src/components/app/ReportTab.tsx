@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search } from 'lucide-react';
+import { FileText, Download, Copy, CheckCircle2, AlertTriangle, XCircle, HelpCircle, MessageCircle, Clock, Trash2, Loader2, RotateCcw, History, Search, Stethoscope, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useChat } from '@/contexts/ChatContext';
-import type { Claim, VerificationSummary } from '@/lib/verification';
+import type { Claim, Intervention, VerificationSummary } from '@/lib/verification';
 import type { VerificationHistoryEntry } from '@/hooks/useVerificationHistory';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -27,6 +27,7 @@ type ClaimStatus = 'supported' | 'partial' | 'unsupported' | 'contradicted';
 interface ReportTabProps {
   hasVerified: boolean;
   claims: Claim[];
+  interventions: Intervention[];
   summary: VerificationSummary | null;
   sourcesCount: number;
   draftLength: number;
@@ -51,6 +52,7 @@ const getStatusConfig = (status: string) => {
 export const ReportTab = ({
   hasVerified,
   claims,
+  interventions,
   summary,
   sourcesCount,
   draftLength,
@@ -295,6 +297,95 @@ export const ReportTab = ({
           {t('report.copyMarkdown')}
         </Button>
       </div>
+
+      {/* Interventions Section */}
+      {interventions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Stethoscope className="h-5 w-5 text-accent-foreground" />
+              {t('intervention.title')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {interventions.map((intervention) => {
+              const hasIssues = !intervention.hasEvidence || !intervention.hasRationale;
+              
+              return (
+                <div key={intervention.id} className="border-b pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-start gap-3">
+                    <Stethoscope className={`h-5 w-5 mt-0.5 ${hasIssues ? 'text-warning' : 'text-success'}`} />
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm text-foreground">{intervention.text}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Evidence badge */}
+                        <Badge 
+                          variant={intervention.hasEvidence ? 'default' : 'outline'}
+                          className={`text-xs ${intervention.hasEvidence ? 'bg-success/10 text-success border-success/30' : 'text-caution border-caution/30'}`}
+                        >
+                          <BookOpen className="h-3 w-3 mr-1" />
+                          {intervention.hasEvidence 
+                            ? t('intervention.evidenceBased')
+                            : t('intervention.missingEvidence')
+                          }
+                        </Badge>
+                        
+                        {/* Rationale badge */}
+                        <Badge 
+                          variant={intervention.hasRationale ? 'default' : 'outline'}
+                          className={`text-xs ${intervention.hasRationale ? 'bg-success/10 text-success border-success/30' : 'text-caution border-caution/30'}`}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          {intervention.hasRationale 
+                            ? t('intervention.rationaleProvided')
+                            : t('intervention.missingRationale')
+                          }
+                        </Badge>
+                        
+                        {intervention.sourceRef && (
+                          <Badge variant="secondary" className="text-xs">
+                            {intervention.sourceRef}
+                          </Badge>
+                        )}
+                        
+                        {!intervention.hasEvidence && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              // Use chat to find evidence for this intervention
+                              const query = language === 'fr'
+                                ? `Trouve des articles académiques pour soutenir cette intervention infirmière: "${intervention.text}"`
+                                : `Find academic articles to support this nursing intervention: "${intervention.text}"`;
+                              findArticlesForClaim({ id: intervention.id, text: intervention.text, status: 'unsupported' });
+                            }}
+                          >
+                            <Search className="h-3 w-3" />
+                            {t('intervention.findEvidence')}
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {intervention.rationaleText && (
+                        <p className="text-xs text-muted-foreground bg-muted p-2 rounded italic">
+                          "{intervention.rationaleText}"
+                        </p>
+                      )}
+                      
+                      {intervention.suggestion && (
+                        <p className="text-xs text-primary">
+                          💡 {intervention.suggestion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Claims List */}
       <Card>

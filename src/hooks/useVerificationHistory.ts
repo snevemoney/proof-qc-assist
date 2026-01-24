@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Claim, VerificationSummary, Source } from '@/lib/verification';
+import { Claim, Intervention, VerificationSummary, Source } from '@/lib/verification';
 import type { Json } from '@/integrations/supabase/types';
 
 export interface VerificationHistoryEntry {
   id: string;
   claims: Claim[];
+  interventions: Intervention[];
   summary: VerificationSummary | null;
   draftText: string;
   sourcesSnapshot: Source[];
@@ -42,6 +43,7 @@ export const useVerificationHistory = () => {
       const entries: VerificationHistoryEntry[] = (data || []).map((row) => ({
         id: row.id,
         claims: (row.claims as unknown as Claim[]) || [],
+        interventions: ((row as any).interventions as unknown as Intervention[]) || [],
         summary: row.summary as unknown as VerificationSummary | null,
         draftText: row.draft_text || '',
         sourcesSnapshot: (row.sources_snapshot as unknown as Source[]) || [],
@@ -79,11 +81,12 @@ export const useVerificationHistory = () => {
             user_id: user.id,
             project_id: projectData?.id || null,
             claims: entry.claims as unknown as Json,
+            interventions: entry.interventions as unknown as Json,
             summary: entry.summary as unknown as Json,
             draft_text: entry.draftText,
             sources_snapshot: entry.sourcesSnapshot as unknown as Json,
             strict_mode: entry.strictMode,
-          })
+          } as any)
           .select()
           .single();
 
