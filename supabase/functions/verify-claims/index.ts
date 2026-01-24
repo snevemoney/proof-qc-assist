@@ -51,10 +51,14 @@ Look for interventions indicated by:
 - Clinical actions: medication administration, vital signs monitoring, patient education, wound care, mobility assistance, pain management
 
 For each intervention, evaluate:
-1. hasEvidence: Is this intervention supported by research evidence in the sources? (true/false)
-2. hasRationale: Does the student explain WHY this intervention is clinically appropriate? (true/false)
-3. rationaleText: Extract the rationale if present
-4. suggestion: Helpful suggestion if evidence or rationale is missing
+1. severity: Assign a priority level based on clinical importance:
+   - "critical": Life-threatening or safety-critical interventions (e.g., medication administration, airway management, fall prevention, infection control). These REQUIRE the strongest research evidence.
+   - "standard": Core nursing care interventions that are part of evidence-based practice (e.g., vital signs monitoring, wound care, mobility assistance). These need solid evidence.
+   - "optional": Supportive comfort measures or patient preferences (e.g., aromatherapy, music therapy, positioning for comfort). Nice to have evidence but not mandatory.
+2. hasEvidence: Is this intervention supported by research evidence in the sources? (true/false)
+3. hasRationale: Does the student explain WHY this intervention is clinically appropriate? (true/false)
+4. rationaleText: Extract the rationale if present
+5. suggestion: Helpful suggestion if evidence or rationale is missing (especially important for critical interventions)
 
 STRICT MODE: When strict mode is enabled, require explicit citations and direct quotes. Without strict mode, allow reasonable paraphrasing.
 
@@ -91,10 +95,14 @@ Recherchez les interventions indiquées par:
 - Actions cliniques: administration de médicaments, surveillance des signes vitaux, éducation du patient, soins des plaies, aide à la mobilité, gestion de la douleur
 
 Pour chaque intervention, évaluez:
-1. hasEvidence: Cette intervention est-elle soutenue par des preuves de recherche dans les sources? (vrai/faux)
-2. hasRationale: L'étudiant explique-t-il POURQUOI cette intervention est cliniquement appropriée? (vrai/faux)
-3. rationaleText: Extrayez la justification si présente
-4. suggestion: Suggestion utile si la preuve ou la justification manque
+1. severity: Attribuez un niveau de priorité basé sur l'importance clinique:
+   - "critical": Interventions critiques pour la vie ou la sécurité (ex: administration de médicaments, gestion des voies respiratoires, prévention des chutes, contrôle des infections). EXIGENT les preuves de recherche les plus solides.
+   - "standard": Interventions de soins infirmiers de base qui font partie de la pratique fondée sur des preuves (ex: surveillance des signes vitaux, soins des plaies, aide à la mobilité). Nécessitent des preuves solides.
+   - "optional": Mesures de confort de soutien ou préférences du patient (ex: aromathérapie, musicothérapie, positionnement pour le confort). Preuves souhaitables mais non obligatoires.
+2. hasEvidence: Cette intervention est-elle soutenue par des preuves de recherche dans les sources? (vrai/faux)
+3. hasRationale: L'étudiant explique-t-il POURQUOI cette intervention est cliniquement appropriée? (vrai/faux)
+4. rationaleText: Extrayez la justification si présente
+5. suggestion: Suggestion utile si la preuve ou la justification manque (particulièrement important pour les interventions critiques)
 
 MODE STRICT: Lorsque le mode strict est activé, exigez des citations explicites et des citations directes. Sans mode strict, autorisez une paraphrase raisonnable.
 
@@ -208,6 +216,11 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                           type: "string",
                           description: "The nursing intervention text from the student's draft"
                         },
+                        severity: {
+                          type: "string",
+                          enum: ["critical", "standard", "optional"],
+                          description: "Priority level: critical (life/safety), standard (core care), optional (comfort/preference)"
+                        },
                         hasEvidence: {
                           type: "boolean",
                           description: "Whether this intervention is supported by research evidence in the sources"
@@ -229,7 +242,7 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                           description: "Helpful suggestion for the student if evidence or rationale is missing"
                         }
                       },
-                      required: ["text", "hasEvidence", "hasRationale"],
+                      required: ["text", "severity", "hasEvidence", "hasRationale"],
                       additionalProperties: false
                     }
                   },
@@ -301,10 +314,11 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
       id: `claim-${Date.now()}-${index}`,
     }));
 
-    // Add unique IDs to interventions
+    // Add unique IDs to interventions and ensure severity fallback
     const interventionsWithIds = (result.interventions || []).map((intervention: any, index: number) => ({
       ...intervention,
       id: `intervention-${Date.now()}-${index}`,
+      severity: intervention.severity || 'standard', // Fallback to standard if not provided
     }));
 
     // Ensure summary has intervention fields (fallback for edge cases)

@@ -95,6 +95,12 @@ const translations = {
     'intervention.addRationale': 'Add rationale',
     'intervention.findEvidence': 'Find evidence',
     'intervention.noInterventions': 'No nursing interventions identified',
+    'intervention.critical': 'Critical',
+    'intervention.standard': 'Standard',
+    'intervention.optional': 'Optional',
+    'intervention.criticalDesc': 'Requires strongest evidence',
+    'intervention.standardDesc': 'Standard care practice',
+    'intervention.optionalDesc': 'Supportive measure',
   },
   fr: {
     // Tabs
@@ -182,6 +188,12 @@ const translations = {
     'intervention.addRationale': 'Ajouter une justification',
     'intervention.findEvidence': 'Trouver des preuves',
     'intervention.noInterventions': 'Aucune intervention infirmière identifiée',
+    'intervention.critical': 'Critique',
+    'intervention.standard': 'Standard',
+    'intervention.optional': 'Optionnel',
+    'intervention.criticalDesc': 'Nécessite les preuves les plus solides',
+    'intervention.standardDesc': 'Pratique de soins standard',
+    'intervention.optionalDesc': 'Mesure de soutien',
   },
 };
 
