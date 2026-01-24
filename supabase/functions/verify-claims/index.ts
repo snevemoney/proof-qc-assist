@@ -13,11 +13,23 @@ interface Source {
   content: string;
 }
 
+interface EvaluationCriterion {
+  id: string;
+  name: string;
+  nameFr: string;
+  description: string;
+  descriptionFr: string;
+  weight: number;
+  isRequired: boolean;
+}
+
 interface VerifyRequest {
   sources: Source[];
   draftText: string;
   strictMode: boolean;
   language: 'fr' | 'en';
+  instructions?: string;
+  evaluationGrid?: EvaluationCriterion[];
 }
 
 const systemPromptEN = `You are an academic verification assistant for Quebec university nursing students. Your task is to verify claims AND nursing interventions in a student's draft against their uploaded sources.
@@ -61,6 +73,19 @@ For each intervention, evaluate:
 5. suggestion: Helpful suggestion if evidence or rationale is missing (especially important for critical interventions)
 
 STRICT MODE: When strict mode is enabled, require explicit citations and direct quotes. Without strict mode, allow reasonable paraphrasing.
+
+TEACHER REQUIREMENTS VERIFICATION:
+When teacher instructions are provided, verify each requirement separately. Categorize each as:
+- "met": The requirement is fully satisfied in the draft
+- "partial": The requirement is partially met but missing some elements
+- "not_met": The requirement is not addressed in the draft
+- "unable_to_verify": Cannot determine if requirement is met from the draft
+
+RUBRIC EVALUATION:
+When an evaluation grid is provided, estimate the student's score for each criterion (0-100). Base your evaluation on:
+- How well the draft addresses each criterion
+- Evidence of the required elements in the student's work
+- Provide specific feedback for each criterion
 
 Respond using the suggest_claims tool with your analysis.`;
 
@@ -111,6 +136,19 @@ Pour chaque intervention, évaluez:
 
 MODE STRICT: Lorsque le mode strict est activé, exigez des citations explicites et des citations directes. Sans mode strict, autorisez une paraphrase raisonnable.
 
+VÉRIFICATION DES EXIGENCES DU PROFESSEUR:
+Lorsque des consignes du professeur sont fournies, vérifiez chaque exigence séparément. Catégorisez chacune comme:
+- "met": L'exigence est pleinement satisfaite dans le brouillon
+- "partial": L'exigence est partiellement respectée mais manque certains éléments
+- "not_met": L'exigence n'est pas abordée dans le brouillon
+- "unable_to_verify": Impossible de déterminer si l'exigence est respectée à partir du brouillon
+
+ÉVALUATION SELON LA GRILLE:
+Lorsqu'une grille d'évaluation est fournie, estimez le score de l'étudiant pour chaque critère (0-100). Basez votre évaluation sur:
+- Dans quelle mesure le brouillon répond à chaque critère
+- Les preuves des éléments requis dans le travail de l'étudiant
+- Fournissez une rétroaction spécifique pour chaque critère
+
 RAPPEL FINAL: Rédigez TOUTES vos analyses, suggestions, preuves et rétroactions EN FRANÇAIS. Utilisez l'outil suggest_claims avec votre analyse.`;
 
 serve(async (req) => {
@@ -119,7 +157,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sources, draftText, strictMode, language }: VerifyRequest = await req.json();
+    const { sources, draftText, strictMode, language, instructions, evaluationGrid }: VerifyRequest = await req.json();
 
     if (!sources || sources.length === 0) {
       return new Response(
@@ -149,15 +187,39 @@ Content: ${source.content || 'No content extracted yet'}
 ---`;
     }).join("\n\n");
 
+    // Format teacher instructions if provided
+    let instructionsSection = '';
+    if (instructions && instructions.trim()) {
+      instructionsSection = `
+${language === 'fr' ? 'CONSIGNES DU PROFESSEUR À VÉRIFIER' : 'TEACHER INSTRUCTIONS TO VERIFY'}:
+${instructions}
+`;
+    }
+
+    // Format evaluation grid if provided
+    let evaluationGridSection = '';
+    if (evaluationGrid && evaluationGrid.length > 0) {
+      const criteriaList = evaluationGrid.map((c, i) => {
+        const name = language === 'fr' ? (c.nameFr || c.name) : c.name;
+        const desc = language === 'fr' ? (c.descriptionFr || c.description) : c.description;
+        return `${i + 1}. ${name} (${c.weight}%${c.isRequired ? ', ' + (language === 'fr' ? 'OBLIGATOIRE' : 'REQUIRED') : ''}): ${desc}`;
+      }).join('\n');
+      
+      evaluationGridSection = `
+${language === 'fr' ? 'GRILLE D\'ÉVALUATION DU PROFESSEUR' : 'TEACHER EVALUATION GRID'}:
+${criteriaList}
+`;
+    }
+
     const userPrompt = `${language === 'fr' ? 'MODE STRICT' : 'STRICT MODE'}: ${strictMode ? (language === 'fr' ? 'ACTIVÉ' : 'ENABLED') : (language === 'fr' ? 'DÉSACTIVÉ' : 'DISABLED')}
 
 ${language === 'fr' ? 'SOURCES DISPONIBLES' : 'AVAILABLE SOURCES'}:
 ${sourcesContext}
-
+${instructionsSection}${evaluationGridSection}
 ${language === 'fr' ? 'BROUILLON DE L\'ÉTUDIANT À VÉRIFIER' : 'STUDENT DRAFT TO VERIFY'}:
 ${draftText}
 
-${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}`;
+${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation vérifiable ET chaque intervention infirmière. Pour chaque affirmation, déterminez si elle est soutenue, partiellement soutenue, non soutenue ou contredite par les sources. Pour chaque intervention, évaluez si elle a des preuves et une justification.' : 'Analyze the draft and identify each verifiable claim AND each nursing intervention. For each claim, determine if it is supported, partially supported, unsupported, or contradicted by the sources. For each intervention, evaluate if it has evidence and rationale.'}${instructions ? (language === 'fr' ? ' Aussi, vérifiez chaque exigence du professeur.' : ' Also, verify each teacher requirement.') : ''}${evaluationGrid && evaluationGrid.length > 0 ? (language === 'fr' ? ' Enfin, estimez le score pour chaque critère de la grille d\'évaluation.' : ' Finally, estimate the score for each evaluation criterion.') : ''}`;
 
     // Create AbortController for timeout (90 seconds for complex drafts)
     const controller = new AbortController();
@@ -306,6 +368,38 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
                       },
                       required: ["totalClaims", "supported", "partial", "unsupported", "contradicted", "totalInterventions", "interventionsWithEvidence", "interventionsWithRationale"],
                       additionalProperties: false
+                    },
+                    requirementChecks: {
+                      type: "array",
+                      description: language === 'fr' ? "Vérification des exigences du professeur" : "Teacher requirement verification",
+                      items: {
+                        type: "object",
+                        properties: {
+                          instruction: { type: "string", description: language === 'fr' ? "L'exigence" : "The requirement" },
+                          status: { type: "string", enum: ["met", "partial", "not_met", "unable_to_verify"] },
+                          evidence: { type: "string", description: language === 'fr' ? "Pourquoi ce statut (en français)" : "Why this status" },
+                          suggestion: { type: "string", description: language === 'fr' ? "Comment améliorer (en français)" : "How to improve" }
+                        },
+                        required: ["instruction", "status"],
+                        additionalProperties: false
+                      }
+                    },
+                    rubricScores: {
+                      type: "array",
+                      description: language === 'fr' ? "Scores estimés par critère" : "Estimated scores per criterion",
+                      items: {
+                        type: "object",
+                        properties: {
+                          criterionId: { type: "string" },
+                          criterionName: { type: "string" },
+                          estimatedScore: { type: "number", description: "0-100" },
+                          maxScore: { type: "number", description: "Weight percentage" },
+                          feedback: { type: "string", description: language === 'fr' ? "Rétroaction (en français)" : "Feedback" },
+                          improvements: { type: "array", items: { type: "string" }, description: language === 'fr' ? "Améliorations suggérées (en français)" : "Suggested improvements" }
+                        },
+                        required: ["criterionId", "criterionName", "estimatedScore", "maxScore"],
+                        additionalProperties: false
+                      }
                     }
                   },
                   required: ["claims", "interventions", "summary"],
@@ -391,7 +485,9 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v�
       JSON.stringify({ 
         claims: claimsWithIds,
         interventions: interventionsWithIds,
-        summary 
+        summary,
+        requirementChecks: result.requirementChecks || [],
+        rubricScores: result.rubricScores || [],
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

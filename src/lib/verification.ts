@@ -127,7 +127,9 @@ async function performVerification(
   sources: Source[],
   draftText: string,
   strictMode: boolean,
-  language: 'fr' | 'en'
+  language: 'fr' | 'en',
+  instructions?: string,
+  evaluationGrid?: any[]
 ): Promise<VerificationResult> {
   console.log('verifyClaims: Starting with', sources.length, 'sources, draftText length:', draftText.length);
 
@@ -142,6 +144,8 @@ async function performVerification(
     draftText,
     strictMode,
     language,
+    instructions,
+    evaluationGrid,
   };
 
   console.log('verifyClaims: Request body:', JSON.stringify(requestBody, null, 2).substring(0, 500));
@@ -153,17 +157,14 @@ async function performVerification(
   console.log('verifyClaims: Response - data:', data, 'error:', error);
 
   if (error) {
-    // Classify and throw appropriate VerificationError
     throw classifyError(error, language);
   }
 
   if (data?.error) {
-    // Server returned an error in the response body
     const serverError = new Error(data.error);
     throw classifyError(serverError, language);
   }
 
-  // Validate response structure
   if (!data || !Array.isArray(data.claims)) {
     throw new VerificationError(
       'parse_error',
@@ -182,10 +183,12 @@ export async function verifyClaims(
   draftText: string,
   strictMode: boolean,
   language: 'fr' | 'en',
-  onRetry?: (attempt: number, error: Error, delayMs: number) => void
+  onRetry?: (attempt: number, error: Error, delayMs: number) => void,
+  instructions?: string,
+  evaluationGrid?: any[]
 ): Promise<VerificationResult> {
   return withRetry(
-    () => performVerification(sources, draftText, strictMode, language),
+    () => performVerification(sources, draftText, strictMode, language, instructions, evaluationGrid),
     DEFAULT_RETRY_CONFIG,
     onRetry
   );
