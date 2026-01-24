@@ -146,6 +146,31 @@ export const ChatPanel = () => {
     }
   }, [currentSessionId, messages.length, renameSession]);
 
+  // Sync streaming content from context to persistent storage
+  useEffect(() => {
+    if (streamingMessageIdRef.current && contextMessages.length > 0) {
+      const lastMessage = contextMessages[contextMessages.length - 1];
+      if (lastMessage?.role === 'assistant') {
+        updateMessageStreaming(
+          streamingMessageIdRef.current, 
+          lastMessage.content, 
+          lastMessage.isStreaming ?? false
+        );
+      }
+    }
+  }, [contextMessages, updateMessageStreaming]);
+
+  // Finalize streaming message when loading completes
+  useEffect(() => {
+    if (!contextLoading && streamingMessageIdRef.current && contextMessages.length > 0) {
+      const lastMessage = contextMessages[contextMessages.length - 1];
+      if (lastMessage?.role === 'assistant' && !lastMessage.isStreaming) {
+        updateMessageStreaming(streamingMessageIdRef.current, lastMessage.content, false);
+        streamingMessageIdRef.current = null;
+      }
+    }
+  }, [contextLoading, contextMessages, updateMessageStreaming]);
+
   const handleSendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
     if (!content.trim() || isLoading || !currentSessionId) return;
     
@@ -164,25 +189,24 @@ export const ChatPanel = () => {
       if (!assistantMessage) throw new Error('Failed to add assistant message');
       streamingMessageIdRef.current = assistantMessage.id;
       
-      // Send to API and stream response
+      // Send to API - the useEffect hooks above will sync the streaming content
       await sendContextMessage(content, action);
       
-      // The context's sendMessage will update the messages via useEffect
-      // For now, we'll finalize the streaming message
-      if (streamingMessageIdRef.current) {
-        // Get the final content from context messages
-        const lastContextMessage = contextMessages[contextMessages.length - 1];
-        if (lastContextMessage && lastContextMessage.role === 'assistant') {
-          updateMessageStreaming(streamingMessageIdRef.current, lastContextMessage.content, false);
-        }
-      }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Show error in the streaming message
+      if (streamingMessageIdRef.current) {
+        updateMessageStreaming(
+          streamingMessageIdRef.current, 
+          language === 'fr' ? 'Erreur lors de l\'envoi du message.' : 'Error sending message.', 
+          false
+        );
+        streamingMessageIdRef.current = null;
+      }
     } finally {
       setIsLoading(false);
-      streamingMessageIdRef.current = null;
     }
-  }, [isLoading, currentSessionId, autoRenameSession, addMessage, sendContextMessage, contextMessages, updateMessageStreaming]);
+  }, [isLoading, currentSessionId, autoRenameSession, addMessage, sendContextMessage, updateMessageStreaming, language]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,16 +230,13 @@ export const ChatPanel = () => {
         const assistantMessage = await addMessage('assistant', '', true);
         if (assistantMessage) {
           streamingMessageIdRef.current = assistantMessage.id;
+          // Send to API - useEffect hooks will sync the response
           await sendContextMessage(newContent, 'chat');
-          
-          const lastContextMessage = contextMessages[contextMessages.length - 1];
-          if (lastContextMessage && lastContextMessage.role === 'assistant') {
-            updateMessageStreaming(assistantMessage.id, lastContextMessage.content, false);
-          }
         }
+      } catch (error) {
+        console.error('Error re-sending edited message:', error);
       } finally {
         setIsLoading(false);
-        streamingMessageIdRef.current = null;
       }
     }
   };

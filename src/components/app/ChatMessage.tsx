@@ -182,20 +182,20 @@ export const ChatMessage = ({
   return (
     <TooltipProvider>
       <div className={cn(
-        "group flex gap-2 sm:gap-3 p-3 sm:p-4",
+        "group flex gap-3 sm:gap-4 p-4 sm:p-5",
         isUser ? "bg-muted/50" : "bg-background"
       )}>
         <div className={cn(
-          "flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
+          "flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center",
           isUser ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
         )}>
-          {isUser ? <User className="h-3 w-3 sm:h-4 sm:w-4" /> : <Bot className="h-3 w-3 sm:h-4 sm:w-4" />}
+          {isUser ? <User className="h-4 w-4 sm:h-5 sm:w-5" /> : <Bot className="h-4 w-4 sm:h-5 sm:w-5" />}
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <span className="text-xs sm:text-sm font-medium">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <span className="text-sm sm:text-base font-medium">
                 {isUser ? translations.you : 'ProofCheck AI'}
               </span>
               
@@ -243,9 +243,12 @@ export const ChatMessage = ({
               {/* Timestamp with tooltip */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground cursor-default">
+                  <button 
+                    type="button"
+                    className="text-xs sm:text-sm text-muted-foreground cursor-default hover:text-muted-foreground/80"
+                  >
                     {formatRelativeTime(messageDate, language)}
-                  </span>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
                   {formatFullDateTime(messageDate, language)}
@@ -276,11 +279,11 @@ export const ChatMessage = ({
           )}
 
           {isEditing ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="min-h-[80px] text-sm"
+                className="min-h-[100px] text-sm sm:text-base"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') handleCancelEdit();
@@ -309,12 +312,12 @@ export const ChatMessage = ({
             </div>
           ) : (
             <div className={cn(
-              "text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none",
+              "text-sm sm:text-base text-foreground whitespace-pre-wrap break-words prose prose-sm sm:prose-base max-w-none",
               isViewingOldVersion && "opacity-70"
             )}>
               {isUser ? displayContent : textContent}
               {'isStreaming' in message && message.isStreaming && (
-                <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+                <span className="inline-block w-2 h-5 ml-1 bg-primary animate-pulse rounded-sm" />
               )}
             </div>
           )}
