@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bot, User, Pencil, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +9,6 @@ import type { ChatMessage as ChatMessageType, MessageVersion } from '@/hooks/use
 import { ArticleSuggestionCard, type ArticleResult } from './ArticleSuggestionCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatRelativeTime, formatFullDateTime } from '@/lib/formatRelativeTime';
-
 interface ChatMessageProps {
   message: ChatMessageType | { id: string; role: 'user' | 'assistant'; content: string; timestamp?: Date; isStreaming?: boolean; createdAt?: Date; isEdited?: boolean; parentMessageId?: string | null };
   onAddArticle?: (article: ArticleResult) => void;
@@ -312,10 +312,30 @@ export const ChatMessage = ({
             </div>
           ) : (
             <div className={cn(
-              "text-sm text-foreground whitespace-pre-wrap break-words prose prose-sm max-w-none",
+              "text-sm text-foreground break-words",
               isViewingOldVersion && "opacity-70"
             )}>
-              {isUser ? displayContent : textContent}
+              {isUser ? (
+                <div className="whitespace-pre-wrap">{displayContent}</div>
+              ) : (
+                <div className="prose prose-sm max-w-none dark:prose-invert prose-p:mb-2 prose-p:last:mb-0 prose-headings:text-sm prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1 prose-ul:pl-4 prose-ul:mb-2 prose-li:text-sm prose-strong:font-semibold">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({children}) => <h4 className="font-semibold text-sm mt-3 mb-1">{children}</h4>,
+                      h2: ({children}) => <h5 className="font-medium text-sm mt-2 mb-1">{children}</h5>,
+                      h3: ({children}) => <h6 className="font-medium text-sm mt-2 mb-1">{children}</h6>,
+                      p: ({children}) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                      ul: ({children}) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                      ol: ({children}) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                      li: ({children}) => <li className="text-sm leading-relaxed">{children}</li>,
+                      strong: ({children}) => <strong className="font-semibold">{children}</strong>,
+                      a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{children}</a>,
+                    }}
+                  >
+                    {textContent}
+                  </ReactMarkdown>
+                </div>
+              )}
               {'isStreaming' in message && message.isStreaming && (
                 <span className="inline-block w-2 h-5 ml-1 bg-primary animate-pulse rounded-sm" />
               )}
