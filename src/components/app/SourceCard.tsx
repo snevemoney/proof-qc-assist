@@ -7,7 +7,6 @@ import { getEvidenceLevel, getStudyTypeBadgeColor } from '@/lib/studyTypes';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -51,22 +50,20 @@ export const SourceCard = ({
             <FileText className="h-4 w-4 text-muted-foreground" />
             
             {/* Evidence Level Badge */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${evidenceLevel.color}`}>
-                    {language === 'fr' ? evidenceLevel.labelFr : evidenceLevel.label}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[200px]">
-                  <p className="text-xs">
-                    {language === 'fr' 
-                      ? 'Pyramide des preuves: Niveau I (plus fort) à VII (plus faible)'
-                      : 'Evidence pyramid: Level I (strongest) to VII (weakest)'}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${evidenceLevel.color}`}>
+                  {language === 'fr' ? evidenceLevel.labelFr : evidenceLevel.label}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[200px]">
+                <p className="text-xs">
+                  {language === 'fr' 
+                    ? 'Pyramide des preuves: Niveau I (plus fort) à VII (plus faible)'
+                    : 'Evidence pyramid: Level I (strongest) to VII (weakest)'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
             
             {/* Study Type Badge */}
             {studyType && (
