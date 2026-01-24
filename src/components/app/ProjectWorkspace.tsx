@@ -37,6 +37,7 @@ const ProjectWorkspaceContent = () => {
     activeTab,
     strictMode,
     hasVerified,
+    verificationLanguage,
     isLoading,
     isSaving,
     setSources,
@@ -48,6 +49,7 @@ const ProjectWorkspaceContent = () => {
     setActiveTab,
     setStrictMode,
     setHasVerified,
+    setVerificationLanguage,
     updateStateImmediate,
   } = useProject(currentProjectId);
 
@@ -203,6 +205,7 @@ const ProjectWorkspaceContent = () => {
         interventions: result.interventions || [],
         summary: result.summary,
         hasVerified: true,
+        verificationLanguage: language,
       });
       
       // Blur any focused tooltip triggers to force-close tooltips before tab switch
@@ -368,6 +371,8 @@ const ProjectWorkspaceContent = () => {
               showAuthPrompt={showAuthPrompt && !user}
               onDismissAuthPrompt={() => setShowAuthPrompt(false)}
               onOpenAuthModal={() => setAuthModalOpen(true)}
+              verificationLanguage={verificationLanguage}
+              onReverify={handleVerify}
             />
           </TabsContent>
         </div>
