@@ -16,7 +16,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
 interface HistoryPanelProps {
@@ -29,6 +28,7 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
   const { history, isLoading, deleteFromHistory } = useVerificationHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
 
   const locale = language === 'fr' ? fr : enUS;
 
@@ -36,6 +36,7 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
     setDeletingId(id);
     await deleteFromHistory(id);
     setDeletingId(null);
+    setEntryToDelete(null);
   };
 
   const getStatusSummary = (entry: VerificationHistoryEntry) => {
@@ -122,52 +123,28 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
                           {entry.sourcesSnapshot.length} {language === 'fr' ? 'sources' : 'sources'}
                         </span>
                         {entry.strictMode && (
-                          <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 text-xs">
+                          <span className="px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-xs">
                             {language === 'fr' ? 'Strict' : 'Strict'}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 h-8 w-8"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {deletingId === entry.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {language === 'fr' ? 'Supprimer cette entrée?' : 'Delete this entry?'}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {language === 'fr'
-                              ? 'Cette action est irréversible.'
-                              : 'This action cannot be undone.'}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>
-                            {language === 'fr' ? 'Annuler' : 'Cancel'}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(entry.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {language === 'fr' ? 'Supprimer' : 'Delete'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEntryToDelete(entry.id);
+                      }}
+                    >
+                      {deletingId === entry.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -183,6 +160,36 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
         }`}
         onClick={() => setIsOpen(false)}
       />
+
+      {/* Single controlled AlertDialog - hoisted outside map to prevent portal race conditions */}
+      <AlertDialog 
+        open={entryToDelete !== null} 
+        onOpenChange={(open) => !open && setEntryToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'fr' ? 'Supprimer cette entrée?' : 'Delete this entry?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'fr'
+                ? 'Cette action est irréversible.'
+                : 'This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {language === 'fr' ? 'Annuler' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => entryToDelete && handleDelete(entryToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {language === 'fr' ? 'Supprimer' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

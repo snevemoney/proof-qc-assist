@@ -271,8 +271,12 @@ export const ChatPanel = () => {
                 <ChevronDown className={cn("h-3.5 w-3.5 flex-shrink-0 transition-transform", showSessions && "rotate-180")} />
               </Button>
               
-              {showSessions && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-[60] overflow-hidden">
+              {/* Always mounted dropdown - CSS visibility to prevent portal race conditions */}
+              <div 
+                className={`absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-[60] overflow-hidden transition-opacity ${
+                  showSessions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+              >
                   <div className="p-2 border-b border-border">
                     <Button 
                       variant="ghost" 
@@ -345,8 +349,7 @@ export const ChatPanel = () => {
                       </div>
                     ))}
                   </ScrollArea>
-                </div>
-              )}
+              </div>
             </div>
             
             <div className="flex flex-wrap gap-2 mt-2">
