@@ -127,22 +127,68 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const sendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
     // Auto-detect article-related requests and route to find-sources
     const articleKeywordsEN = [
+      // Basic article requests
       'find article', 'find articles', 'search article', 'search articles',
       'find source', 'find sources', 'academic source', 'academic sources',
       'find paper', 'find papers', 'research paper', 'look for article',
-      'search for article', 'find study', 'find studies', 'find evidence'
+      'search for article', 'find study', 'find studies', 'find evidence',
+      // Follow-up requests
+      'more articles', 'another article', 'another source', 'more sources',
+      'additional articles', 'additional sources', 'find more', 'search more',
+      'other articles', 'different article', 'different sources',
+      // Topic-specific patterns
+      'articles about', 'articles on', 'sources about', 'sources on',
+      'papers about', 'papers on', 'studies about', 'studies on',
+      'evidence for', 'evidence about', 'research on', 'research about',
+      // Request patterns
+      'can you find', 'could you find', 'please find', 'help me find',
+      'looking for articles', 'looking for sources', 'need articles',
+      'need sources', 'need evidence', 'get me articles', 'get articles',
+      // Continuation patterns
+      'show me more', 'any other', 'what else', 'anything else',
+      'related articles', 'similar articles', 'similar sources',
     ];
     const articleKeywordsFR = [
+      // Basic article requests
       'trouve article', 'trouver article', 'cherche article', 'chercher article',
       'trouve source', 'trouver source', 'source académique', 'sources académiques',
       'article académique', 'articles académiques', 'cherche étude', 'trouve étude',
-      'trouver des articles', 'chercher des articles', 'trouve preuve', 'trouver preuve'
+      'trouver des articles', 'chercher des articles', 'trouve preuve', 'trouver preuve',
+      // Follow-up requests
+      'plus d\'articles', 'autres articles', 'autre article', 'autre source',
+      'd\'autres sources', 'd\'autres articles', 'encore des articles',
+      'davantage d\'articles', 'davantage de sources',
+      // Topic-specific patterns
+      'articles sur', 'articles à propos', 'sources sur', 'sources à propos',
+      'études sur', 'études à propos', 'recherches sur', 'preuves sur',
+      'papiers sur', 'documentation sur',
+      // Request patterns
+      'peux-tu trouver', 'pourrais-tu trouver', 'aide-moi à trouver',
+      'je cherche des articles', 'je cherche des sources', 'besoin d\'articles',
+      'besoin de sources', 'montre-moi des articles',
+      // Continuation patterns
+      'montre plus', 'quoi d\'autre', 'autre chose', 'similaires',
+      'articles similaires', 'sources similaires', 'liés à',
     ];
     
     const allKeywords = [...articleKeywordsEN, ...articleKeywordsFR];
     const lowerContent = content.toLowerCase();
     
-    const isArticleRequest = allKeywords.some(keyword => lowerContent.includes(keyword));
+    // Pattern-based detection for flexible matching
+    const articlePatterns = [
+      // "find/get/search [anything] article/source/paper"
+      /\b(find|get|search|look for|recherche|cherche|trouve)\b.{0,30}\b(article|source|paper|study|études?|papier)/i,
+      // "article/source about/on [topic]"
+      /\b(article|source|paper|study|études?)\b.{0,10}\b(about|on|sur|à propos)/i,
+      // "more [articles/sources]" or "[more] articles/sources"
+      /\b(more|plus|autre|autres|additional|davantage)\b.{0,10}\b(article|source|paper|study|études?)/i,
+      // "[any] articles on [topic]"
+      /\b(any|some|quelques?|des)\b.{0,10}\b(article|source|paper|études?)\b.{0,10}\b(on|about|sur|pour)/i,
+    ];
+    
+    const matchesKeyword = allKeywords.some(keyword => lowerContent.includes(keyword));
+    const matchesPattern = articlePatterns.some(pattern => pattern.test(content));
+    const isArticleRequest = matchesKeyword || matchesPattern;
     
     // Upgrade to find-sources if it's an article request but was sent as chat
     if (isArticleRequest && action === 'chat') {
