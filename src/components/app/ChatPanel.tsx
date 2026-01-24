@@ -35,6 +35,7 @@ export const ChatPanel = () => {
     updateMessageStreaming,
     editMessageAndFork,
     clearMessages: clearPersistentMessages,
+    getMessageEditHistory,
     isLoading: messagesLoading,
   } = useChatMessages(currentSessionId);
   
@@ -231,6 +232,7 @@ export const ChatPanel = () => {
                       onAddArticle={addSourceFromSearch}
                       addedArticleIds={addedArticleIds}
                       onEditMessage={message.role === 'user' ? handleEditMessage : undefined}
+                      onGetEditHistory={message.role === 'user' ? getMessageEditHistory : undefined}
                     />
                   </div>
                 ))}

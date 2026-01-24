@@ -78,6 +78,9 @@ const translations = {
     'chat.findEvidence': 'Find more evidence',
     'chat.citationHelp': 'Citation help',
     'chat.improveWriting': 'Improve my writing',
+    'chat.edited': 'Edited',
+    'chat.justNow': 'just now',
+    'chat.viewingVersion': 'Version {n} of {total}',
     
     // Readiness
     'readiness.title': 'Submission Readiness',
@@ -171,6 +174,9 @@ const translations = {
     'chat.findEvidence': 'Trouver plus de preuves',
     'chat.citationHelp': 'Aide aux citations',
     'chat.improveWriting': 'Améliorer mon écriture',
+    'chat.edited': 'Modifié',
+    'chat.justNow': 'à l\'instant',
+    'chat.viewingVersion': 'Version {n} sur {total}',
     
     // Readiness
     'readiness.title': 'Prêt à soumettre',
