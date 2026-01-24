@@ -96,6 +96,25 @@ const ProjectWorkspaceContent = () => {
     });
   };
 
+  const handleDeleteHistory = async (id: string) => {
+    const success = await deleteFromHistory(id);
+    
+    if (success) {
+      // Reset the current verification state
+      setClaims([]);
+      setInterventions([]);
+      setSummary(null);
+      setHasVerified(false);
+      
+      toast({
+        title: language === 'fr' ? 'Rapport supprimé' : 'Report deleted',
+        description: language === 'fr' 
+          ? 'Lancez une nouvelle vérification ou restaurez un historique'
+          : 'Run a new verification or restore from history',
+      });
+    }
+  };
+
   const handleVerify = async () => {
     console.log('handleVerify: Starting verification...');
     setIsVerifying(true);
@@ -236,7 +255,7 @@ const ProjectWorkspaceContent = () => {
               history={history}
               historyLoading={historyLoading}
               onRestoreHistory={handleRestoreHistory}
-              onDeleteHistory={deleteFromHistory}
+              onDeleteHistory={handleDeleteHistory}
             />
           </TabsContent>
         </div>
