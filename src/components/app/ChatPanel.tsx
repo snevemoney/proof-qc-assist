@@ -171,17 +171,53 @@ export const ChatPanel = () => {
     }
   }, [contextLoading, contextMessages, updateMessageStreaming]);
 
+  // Transform internal markers to user-friendly display messages
+  const transformMarkerToDisplayMessage = useCallback((content: string): string => {
+    if (content === '__AUTO_SEARCH_CONTEXT__') {
+      if (projectContext.draftText) {
+        const topic = projectContext.draftText.substring(0, 80).trim();
+        return language === 'fr'
+          ? `Trouve des articles académiques basés sur mon brouillon: "${topic}${projectContext.draftText.length > 80 ? '...' : ''}"`
+          : `Find academic articles based on my draft: "${topic}${projectContext.draftText.length > 80 ? '...' : ''}"`;
+      }
+      return language === 'fr'
+        ? 'Trouve des articles académiques pertinents pour mon travail.'
+        : 'Find relevant academic articles for my work.';
+    }
+    
+    if (content === '__AUTO_SEARCH_WEAK_CLAIMS__') {
+      const weakClaims = projectContext.claims
+        .filter(c => c.status === 'unsupported' || c.status === 'partial')
+        .slice(0, 2);
+      
+      if (weakClaims.length > 0) {
+        const claimPreview = weakClaims[0].text.substring(0, 50);
+        return language === 'fr'
+          ? `Trouve des articles pour soutenir mes affirmations faibles, notamment: "${claimPreview}..."`
+          : `Find articles to support my weak claims, especially: "${claimPreview}..."`;
+      }
+      return language === 'fr'
+        ? 'Trouve des articles pour soutenir mes affirmations qui manquent de preuves.'
+        : 'Find articles to support my claims that lack evidence.';
+    }
+    
+    return content;
+  }, [language, projectContext.draftText, projectContext.claims]);
+
   const handleSendMessage = useCallback(async (content: string, action: 'chat' | 'research' | 'find-sources' = 'chat') => {
     if (!content.trim() || isLoading || !currentSessionId) return;
+    
+    // Transform internal markers to user-friendly display
+    const displayContent = transformMarkerToDisplayMessage(content);
     
     setIsLoading(true);
     
     try {
-      // Auto-rename session on first message
-      await autoRenameSession(content);
+      // Use display content for session naming and storage
+      await autoRenameSession(displayContent);
       
-      // Add user message to persistent storage
-      const userMessage = await addMessage('user', content);
+      // Add user message to persistent storage with friendly display text
+      const userMessage = await addMessage('user', displayContent);
       if (!userMessage) throw new Error('Failed to add user message');
       
       // Create placeholder for assistant message
