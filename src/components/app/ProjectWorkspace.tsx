@@ -82,10 +82,10 @@ const ProjectWorkspaceContent = () => {
   // Reset stale verification flag for logged-in users when history is empty
   // Skip for anonymous users since they don't have history persistence
   useEffect(() => {
-    if (user && !historyLoading && hasVerified && history.length === 0 && claims.length === 0) {
+    if (user && !historyLoading && hasVerified && (history?.length ?? 0) === 0 && (claims?.length ?? 0) === 0) {
       setHasVerified(false);
     }
-  }, [user, historyLoading, hasVerified, history.length, claims.length, setHasVerified]);
+  }, [user, historyLoading, hasVerified, history?.length, claims?.length, setHasVerified]);
 
   // Sync project context with chat (including requirements)
   useEffect(() => {
@@ -323,7 +323,7 @@ const ProjectWorkspaceContent = () => {
           <TabsTrigger value="sources" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
             <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="truncate">{t('tabs.sources')}</span>
-            <span className="hidden xs:inline">({sources.length})</span>
+            <span className="hidden xs:inline">({sources?.length ?? 0})</span>
           </TabsTrigger>
           <TabsTrigger value="requirements" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
             <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />

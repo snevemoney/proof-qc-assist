@@ -88,7 +88,7 @@ export const useProjects = () => {
               updatedAt: new Date(p.updatedAt),
             }));
             setProjects(loadedProjects);
-            if (loadedProjects.length > 0 && !currentProjectId) {
+            if ((loadedProjects?.length ?? 0) > 0 && !currentProjectId) {
               setCurrentProjectId(loadedProjects[0].id);
             }
           } catch (e) {
@@ -96,7 +96,7 @@ export const useProjects = () => {
           }
         }
         
-        if (projects.length === 0) {
+        if ((projects?.length ?? 0) === 0) {
           const defaultProject: Project = {
             id: 'local-project-1',
             name: 'My Project',
