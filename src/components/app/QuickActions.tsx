@@ -1,4 +1,5 @@
-import { Lightbulb, Search, BookOpen, PenTool, GraduationCap, HeartPulse, Stethoscope, ClipboardCheck, BarChart3, Database } from 'lucide-react';
+import { useState } from 'react';
+import { Lightbulb, Search, BookOpen, PenTool, GraduationCap, HeartPulse, Stethoscope, ClipboardCheck, BarChart3, Database, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -18,6 +19,7 @@ export const QuickActions = ({
   disabled 
 }: QuickActionsProps) => {
   const { language } = useLanguage();
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const actions = [
     {
@@ -139,27 +141,59 @@ export const QuickActions = ({
     return true;
   });
   
+  // Get the primary action (Find articles) to always show
+  const primaryAction = availableActions.find(a => a.primary);
+  const secondaryActions = availableActions.filter(a => !a.primary);
+  
   return (
-    <div className="p-2 sm:p-3 border-t border-border">
-      <div className="text-[10px] sm:text-xs text-muted-foreground mb-1.5">
-        {language === 'fr' ? 'Actions rapides' : 'Quick actions'}
-      </div>
-      <div className="flex gap-1.5 overflow-x-auto pb-1.5 -mx-2 px-2 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
-        {availableActions.map((action, index) => (
+    <div className="border-t border-border">
+      <div className="px-2 py-1.5 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-[11px] sm:text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <Zap className="h-3 w-3" />
+          {language === 'fr' ? 'Actions rapides' : 'Quick actions'}
+          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </Button>
+        
+        {/* Always show primary action */}
+        {primaryAction && (
           <Button
-            key={index}
-            variant={action.primary ? 'default' : 'ghost'}
+            variant="default"
             size="sm"
-            className="h-7 gap-1 px-2 text-[11px] sm:text-xs whitespace-nowrap flex-shrink-0"
-            onClick={() => onAction(action.message, action.action)}
+            className="h-7 gap-1 px-2 text-[11px] sm:text-xs"
+            onClick={() => onAction(primaryAction.message, primaryAction.action)}
             disabled={disabled}
           >
-            <action.icon className="h-3 w-3" />
-            <span className="hidden sm:inline">{action.label}</span>
-            <span className="sm:hidden">{action.label.split(' ').slice(0, 2).join(' ')}</span>
+            <primaryAction.icon className="h-3 w-3" />
+            <span>{primaryAction.label}</span>
           </Button>
-        ))}
+        )}
       </div>
+      
+      {isExpanded && (
+        <div className="px-2 pb-2">
+          <div className="flex gap-1.5 overflow-x-auto pb-1.5 -mx-2 px-2 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
+            {secondaryActions.map((action, index) => (
+              <Button
+                key={index}
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 px-2 text-[11px] sm:text-xs whitespace-nowrap flex-shrink-0"
+                onClick={() => onAction(action.message, action.action)}
+                disabled={disabled}
+              >
+                <action.icon className="h-3 w-3" />
+                <span className="hidden sm:inline">{action.label}</span>
+                <span className="sm:hidden">{action.label.split(' ').slice(0, 2).join(' ')}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

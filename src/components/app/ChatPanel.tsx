@@ -303,32 +303,60 @@ export const ChatPanel = () => {
       {/* Always mounted to avoid Radix portal race conditions */}
       <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
         <SheetContent side="right" className="w-full sm:w-[600px] sm:max-w-[600px] p-0 flex flex-col h-full overflow-hidden">
-          <SheetHeader className="p-3 sm:p-4 border-b border-border flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <SheetHeader className="p-2 sm:p-3 border-b border-border flex-shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <SheetTitle className="flex items-center gap-1.5 text-sm sm:text-base">
+                <Sparkles className="h-4 w-4 text-primary" />
                 <span className="truncate">{language === 'fr' ? 'Assistant ProofCheck' : 'ProofCheck Assistant'}</span>
               </SheetTitle>
+              
+              {/* Inline status badges - hidden on mobile */}
+              <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded-full",
+                  (projectContext?.sources?.length ?? 0) > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                )}>
+                  {projectContext?.sources?.length ?? 0}
+                </span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded-full",
+                  (projectContext?.draftText?.length ?? 0) > 0 ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  {(projectContext?.draftText?.length ?? 0) > 0 ? '✓' : '—'}
+                </span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded-full",
+                  hasVerificationResults ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  {projectContext?.claims?.length ?? 0}
+                </span>
+                {(projectContext?.instructions || (projectContext?.evaluationGrid?.length ?? 0) > 0) && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-chart-2/10 text-chart-2">
+                    <ClipboardCheck className="h-2.5 w-2.5" />
+                  </span>
+                )}
+              </div>
+              
               {(messages?.length ?? 0) > 0 && (
-                <Button variant="ghost" size="icon" onClick={handleClearMessages} className="h-7 w-7 sm:h-8 sm:w-8">
-                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <Button variant="ghost" size="icon" onClick={handleClearMessages} className="h-7 w-7 flex-shrink-0">
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
 
             {/* Chat Sessions Dropdown */}
-            <div className="relative mt-2" ref={sessionDropdownRef}>
+            <div className="relative mt-1.5" ref={sessionDropdownRef}>
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowSessions(!showSessions)}
-                className="w-full justify-between text-sm h-9"
+                className="w-full justify-between text-xs h-8"
               >
                 <span className="flex items-center gap-2 truncate">
-                  <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  <MessageCircle className="h-3 w-3 flex-shrink-0" />
                   <span className="truncate">{currentSession?.name || (language === 'fr' ? 'Nouvelle conversation' : 'New chat')}</span>
                 </span>
-                <ChevronDown className={cn("h-3.5 w-3.5 flex-shrink-0 transition-transform", showSessions && "rotate-180")} />
+                <ChevronDown className={cn("h-3 w-3 flex-shrink-0 transition-transform", showSessions && "rotate-180")} />
               </Button>
               
               {/* Always mounted dropdown - CSS visibility to prevent portal race conditions */}
@@ -410,33 +438,6 @@ export const ChatPanel = () => {
                     ))}
                   </ScrollArea>
               </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
-              <span className={cn(
-                "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
-                (projectContext?.sources?.length ?? 0) > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              )}>
-                {projectContext?.sources?.length ?? 0} sources
-              </span>
-              <span className={cn(
-                "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
-                (projectContext?.draftText?.length ?? 0) > 0 ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
-              )}>
-                {language === 'fr' ? 'Brouillon' : 'Draft'} {(projectContext?.draftText?.length ?? 0) > 0 ? '✓' : '—'}
-              </span>
-              <span className={cn(
-                "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
-                hasVerificationResults ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
-              )}>
-                {projectContext?.claims?.length ?? 0} {language === 'fr' ? 'affirmations' : 'claims'}
-              </span>
-              {(projectContext?.instructions || (projectContext?.evaluationGrid?.length ?? 0) > 0) && (
-                <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-chart-2/10 text-chart-2 flex items-center gap-1">
-                  <ClipboardCheck className="h-2.5 w-2.5" />
-                  {language === 'fr' ? 'Exigences' : 'Requirements'} ✓
-                </span>
-              )}
             </div>
           </SheetHeader>
 
