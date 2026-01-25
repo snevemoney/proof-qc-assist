@@ -26,7 +26,9 @@ export const RequirementsTab: React.FC = () => {
   const { instructions, evaluationGrid, setInstructions, setEvaluationGrid } = useProjectContext();
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
-  const weightValidation = validateWeights(evaluationGrid);
+  // Defensive guard for hydration safety
+  const safeEvaluationGrid = evaluationGrid ?? [];
+  const weightValidation = validateWeights(safeEvaluationGrid);
   const totalWeight = weightValidation.total;
 
   const handleTemplateSelect = (templateId: string) => {
@@ -182,9 +184,9 @@ export const RequirementsTab: React.FC = () => {
           </div>
 
           {/* Criteria List */}
-          {evaluationGrid.length > 0 ? (
+          {safeEvaluationGrid.length > 0 ? (
             <Accordion type="multiple" className="space-y-2">
-              {evaluationGrid.map((criterion, index) => (
+              {safeEvaluationGrid.map((criterion, index) => (
                 <AccordionItem
                   key={criterion.id}
                   value={criterion.id}
@@ -339,19 +341,19 @@ export const RequirementsTab: React.FC = () => {
           </Button>
 
           {/* Summary */}
-          {evaluationGrid.length > 0 && (
+          {safeEvaluationGrid.length > 0 && (
             <div className="flex flex-wrap gap-4 pt-4 border-t">
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
                 <span>
-                  {evaluationGrid.filter(c => c.isRequired).length}{' '}
+                  {safeEvaluationGrid.filter(c => c.isRequired).length}{' '}
                   {language === 'fr' ? 'critères obligatoires' : 'required criteria'}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Grid3X3 className="h-4 w-4 text-muted-foreground" />
                 <span>
-                  {evaluationGrid.length}{' '}
+                  {safeEvaluationGrid.length}{' '}
                   {language === 'fr' ? 'critères au total' : 'total criteria'}
                 </span>
               </div>

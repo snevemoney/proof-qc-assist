@@ -284,9 +284,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         queryParts.push(draftPreview);
       }
       
-      // Add weak claims for targeted search
-      if (isWeakClaimsSearch && projectContext.claims.length > 0) {
-        const weakClaims = projectContext.claims
+      // Add weak claims for targeted search (with defensive guards)
+      const safeClaims = projectContext.claims ?? [];
+      if (isWeakClaimsSearch && safeClaims.length > 0) {
+        const weakClaims = safeClaims
           .filter(c => c.status === 'unsupported' || c.status === 'partial')
           .slice(0, 3)
           .map(c => c.text);
@@ -353,8 +354,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     try {
       // If action is find-sources, first search for articles then stream a response
       if (action === 'find-sources') {
-        // Search for articles
-        const unsupportedClaims = projectContext.claims
+        // Search for articles (with defensive guards)
+        const contextClaims = projectContext.claims ?? [];
+        const unsupportedClaims = contextClaims
           .filter(c => c.status === 'unsupported' || c.status === 'partial')
           .map(c => c.text);
         
@@ -374,8 +376,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               ? projectContext.draftText 
               : undefined,
             context: {
-              draftTopic: projectContext.draftText.substring(0, 500),
-              existingSources: projectContext.sources.map(s => s.title),
+              draftTopic: (projectContext.draftText ?? '').substring(0, 500),
+              existingSources: (projectContext.sources ?? []).map(s => s.title),
               unsupportedClaims: unsupportedClaims.slice(0, 5),
             },
           }),

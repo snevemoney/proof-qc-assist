@@ -154,8 +154,22 @@ export const useProject = (projectId: string | null = null) => {
           try {
             const parsed = JSON.parse(stored);
             const rawVersions = parsed.finalDraftVersions;
+            // Normalize ALL fields to prevent undefined crashes during hydration
             setState({
-              ...parsed,
+              sources: Array.isArray(parsed.sources) ? parsed.sources : [],
+              draftText: parsed.draftText ?? '',
+              claims: Array.isArray(parsed.claims) ? parsed.claims : [],
+              interventions: Array.isArray(parsed.interventions) ? parsed.interventions : [],
+              summary: parsed.summary ?? null,
+              requirementChecks: Array.isArray(parsed.requirementChecks) ? parsed.requirementChecks : [],
+              rubricScores: Array.isArray(parsed.rubricScores) ? parsed.rubricScores : [],
+              activeTab: parsed.activeTab ?? 'sources',
+              strictMode: parsed.strictMode ?? false,
+              hasVerified: parsed.hasVerified ?? false,
+              instructions: parsed.instructions ?? '',
+              evaluationGrid: Array.isArray(parsed.evaluationGrid) ? parsed.evaluationGrid : [],
+              verificationLanguage: parsed.verificationLanguage ?? null,
+              finalDraft: parsed.finalDraft ?? '',
               finalDraftVersions: Array.isArray(rawVersions)
                 ? rawVersions.map((v: DraftVersion) => ({
                     ...v,
