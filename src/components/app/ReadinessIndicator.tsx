@@ -21,25 +21,29 @@ export const ReadinessIndicator = ({
 }: ReadinessIndicatorProps) => {
   const { t, language } = useLanguage();
 
-  if (!hasVerified || (claims.length === 0 && interventions.length === 0)) {
+  // Defensive guards for auth token refresh scenarios
+  const safeClaims = claims ?? [];
+  const safeInterventions = interventions ?? [];
+
+  if (!hasVerified || (safeClaims.length === 0 && safeInterventions.length === 0)) {
     return null;
   }
 
   // Calculate fact-check readiness score
-  const supported = claims.filter(c => c.status === 'supported').length;
-  const partial = claims.filter(c => c.status === 'partial').length;
-  const unsupported = claims.filter(c => c.status === 'unsupported').length;
-  const contradicted = claims.filter(c => c.status === 'contradicted').length;
+  const supported = safeClaims.filter(c => c.status === 'supported').length;
+  const partial = safeClaims.filter(c => c.status === 'partial').length;
+  const unsupported = safeClaims.filter(c => c.status === 'unsupported').length;
+  const contradicted = safeClaims.filter(c => c.status === 'contradicted').length;
   
-  const factCheckScore = claims.length > 0 
-    ? Math.round(((supported * 1.0 + partial * 0.5) / claims.length) * 100)
+  const factCheckScore = safeClaims.length > 0 
+    ? Math.round(((supported * 1.0 + partial * 0.5) / safeClaims.length) * 100)
     : 0;
   const claimIssuesCount = unsupported + contradicted;
 
   // Calculate intervention readiness score
-  const totalInterventions = summary?.totalInterventions ?? interventions.length;
-  const withEvidence = summary?.interventionsWithEvidence ?? interventions.filter(i => i.hasEvidence).length;
-  const withRationale = summary?.interventionsWithRationale ?? interventions.filter(i => i.hasRationale).length;
+  const totalInterventions = summary?.totalInterventions ?? safeInterventions.length;
+  const withEvidence = summary?.interventionsWithEvidence ?? safeInterventions.filter(i => i.hasEvidence).length;
+  const withRationale = summary?.interventionsWithRationale ?? safeInterventions.filter(i => i.hasRationale).length;
   
   const evidenceScore = totalInterventions > 0 ? (withEvidence / totalInterventions) * 100 : 0;
   const rationaleScore = totalInterventions > 0 ? (withRationale / totalInterventions) * 100 : 0;
@@ -113,7 +117,7 @@ export const ReadinessIndicator = ({
       </div>
 
       {/* Fact-Check Progress */}
-      {claims.length > 0 && (
+      {safeClaims.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">

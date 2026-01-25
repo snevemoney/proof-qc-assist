@@ -40,8 +40,9 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
   };
 
   const getStatusSummary = (entry: VerificationHistoryEntry) => {
-    const total = entry.claims.length;
-    const supported = entry.claims.filter(c => c.status === 'supported').length;
+    const entryClaims = entry?.claims ?? [];
+    const total = entryClaims.length;
+    const supported = entryClaims.filter(c => c.status === 'supported').length;
     return `${supported}/${total} ${language === 'fr' ? 'vérifié' : 'verified'}`;
   };
 
@@ -84,7 +85,7 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : history.length === 0 ? (
+          ) : (history?.length ?? 0) === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>{language === 'fr' ? 'Aucun historique' : 'No history yet'}</p>
@@ -96,7 +97,7 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
             </div>
           ) : (
             <div className="p-2 space-y-2">
-              {history.map((entry) => (
+              {(history ?? []).map((entry) => (
                 <div
                   key={entry.id}
                   className="group relative p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
@@ -112,17 +113,17 @@ export const HistoryPanel = ({ onRestoreHistory }: HistoryPanelProps) => {
                         {format(entry.createdAt, 'PPp', { locale })}
                       </div>
                       <p className="text-sm font-medium mt-1 truncate">
-                        {entry.draftText.slice(0, 60)}
-                        {entry.draftText.length > 60 ? '...' : ''}
+                        {(entry?.draftText ?? '').slice(0, 60)}
+                        {(entry?.draftText?.length ?? 0) > 60 ? '...' : ''}
                       </p>
                       <div className="flex items-center gap-2 mt-2 text-xs">
                         <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                           {getStatusSummary(entry)}
                         </span>
                         <span className="text-muted-foreground">
-                          {entry.sourcesSnapshot.length} {language === 'fr' ? 'sources' : 'sources'}
+                          {entry?.sourcesSnapshot?.length ?? 0} {language === 'fr' ? 'sources' : 'sources'}
                         </span>
-                        {entry.strictMode && (
+                        {entry?.strictMode && (
                           <span className="px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-xs">
                             {language === 'fr' ? 'Strict' : 'Strict'}
                           </span>
