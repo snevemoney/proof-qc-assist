@@ -347,8 +347,9 @@ export const useChatMessages = (sessionId: string | null) => {
     return versions;
   }, [user, messages]);
 
+  // Return with defensive fallback - ensures messages is never undefined even during auth refreshes
   return {
-    messages,
+    messages: messages ?? [],
     setMessages,
     addMessage,
     updateMessage,

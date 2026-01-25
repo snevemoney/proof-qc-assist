@@ -47,7 +47,10 @@ export const ChatPanel = () => {
   } = useChatMessages(currentSessionId);
   
   // Merge persistent messages with any streaming context messages
-  const messages = persistentMessages.length > 0 ? persistentMessages : contextMessages.map(m => ({
+  // Defensive guards for auth token refresh scenarios where arrays may become undefined
+  const safePersistentMessages = persistentMessages ?? [];
+  const safeContextMessages = contextMessages ?? [];
+  const messages = safePersistentMessages.length > 0 ? safePersistentMessages : safeContextMessages.map(m => ({
     id: m.id,
     sessionId: currentSessionId || '',
     role: m.role,
@@ -140,11 +143,11 @@ export const ChatPanel = () => {
 
   // Auto-rename session based on first user message
   const autoRenameSession = useCallback(async (content: string) => {
-    if (currentSessionId && messages.length === 0) {
+    if (currentSessionId && (messages?.length ?? 0) === 0) {
       const sessionName = content.slice(0, 40) + (content.length > 40 ? '...' : '');
       await renameSession(currentSessionId, sessionName);
     }
-  }, [currentSessionId, messages.length, renameSession]);
+  }, [currentSessionId, messages?.length, renameSession]);
 
   // Sync streaming content from context to persistent storage
   useEffect(() => {
@@ -282,7 +285,7 @@ export const ChatPanel = () => {
     clearContextMessages();
   };
 
-  const hasVerificationResults = projectContext.claims.length > 0;
+  const hasVerificationResults = (projectContext?.claims?.length ?? 0) > 0;
   const loading = isLoading || contextLoading || messagesLoading;
 
   return (
@@ -306,7 +309,7 @@ export const ChatPanel = () => {
                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 <span className="truncate">{language === 'fr' ? 'Assistant ProofCheck' : 'ProofCheck Assistant'}</span>
               </SheetTitle>
-              {messages.length > 0 && (
+              {(messages?.length ?? 0) > 0 && (
                 <Button variant="ghost" size="icon" onClick={handleClearMessages} className="h-7 w-7 sm:h-8 sm:w-8">
                   <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
@@ -412,23 +415,23 @@ export const ChatPanel = () => {
             <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
               <span className={cn(
                 "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
-                projectContext.sources.length > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                (projectContext?.sources?.length ?? 0) > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               )}>
-                {projectContext.sources.length} sources
+                {projectContext?.sources?.length ?? 0} sources
               </span>
               <span className={cn(
                 "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
-                projectContext.draftText.length > 0 ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+                (projectContext?.draftText?.length ?? 0) > 0 ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
               )}>
-                {language === 'fr' ? 'Brouillon' : 'Draft'} {projectContext.draftText.length > 0 ? '✓' : '—'}
+                {language === 'fr' ? 'Brouillon' : 'Draft'} {(projectContext?.draftText?.length ?? 0) > 0 ? '✓' : '—'}
               </span>
               <span className={cn(
                 "text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
                 hasVerificationResults ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
               )}>
-                {projectContext.claims.length} {language === 'fr' ? 'affirmations' : 'claims'}
+                {projectContext?.claims?.length ?? 0} {language === 'fr' ? 'affirmations' : 'claims'}
               </span>
-              {(projectContext.instructions || projectContext.evaluationGrid.length > 0) && (
+              {(projectContext?.instructions || (projectContext?.evaluationGrid?.length ?? 0) > 0) && (
                 <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-chart-2/10 text-chart-2 flex items-center gap-1">
                   <ClipboardCheck className="h-2.5 w-2.5" />
                   {language === 'fr' ? 'Exigences' : 'Requirements'} ✓
@@ -438,7 +441,7 @@ export const ChatPanel = () => {
           </SheetHeader>
 
           <ScrollArea className="flex-1" viewportRef={scrollRef}>
-            {messages.length === 0 ? (
+            {(messages?.length ?? 0) === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
                 <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary/50" />
                 <h3 className="font-medium mb-2">
@@ -452,7 +455,7 @@ export const ChatPanel = () => {
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {messages.map((message) => (
+                {(messages ?? []).map((message) => (
                   <div key={message.id} className="group">
                     <ChatMessage 
                       message={message}

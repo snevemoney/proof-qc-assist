@@ -116,8 +116,9 @@ export const ReportTab = ({
   const locale = language === 'fr' ? fr : enUS;
 
   const getStatusSummary = (entry: VerificationHistoryEntry) => {
-    const total = entry.claims.length;
-    const supported = entry.claims.filter(c => c.status === 'supported').length;
+    const entryClaims = entry?.claims ?? [];
+    const total = entryClaims.length;
+    const supported = entryClaims.filter(c => c.status === 'supported').length;
     return `${supported}/${total}`;
   };
 
@@ -134,7 +135,7 @@ export const ReportTab = ({
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : history.length === 0 ? (
+        ) : (history?.length ?? 0) === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
             <p className="text-sm">
@@ -153,7 +154,7 @@ export const ReportTab = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {history.map((entry) => (
+                {(history ?? []).map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-2 text-sm">
@@ -166,7 +167,7 @@ export const ReportTab = ({
                     </TableCell>
                     <TableCell className="max-w-[200px]">
                       <p className="truncate text-sm">
-                        {entry.draftText.slice(0, 50)}{entry.draftText.length > 50 ? '...' : ''}
+                        {(entry?.draftText ?? '').slice(0, 50)}{(entry?.draftText?.length ?? 0) > 50 ? '...' : ''}
                       </p>
                     </TableCell>
                     <TableCell>
@@ -269,10 +270,12 @@ export const ReportTab = ({
     );
   }
 
-  const supported = summary?.supported ?? claims.filter(c => c.status === 'supported').length;
-  const partial = summary?.partial ?? claims.filter(c => c.status === 'partial').length;
-  const unsupported = summary?.unsupported ?? claims.filter(c => c.status === 'unsupported').length;
-  const contradicted = summary?.contradicted ?? claims.filter(c => c.status === 'contradicted').length;
+  // Defensive guards for auth token refresh scenarios
+  const safeClaims = claims ?? [];
+  const supported = summary?.supported ?? safeClaims.filter(c => c.status === 'supported').length;
+  const partial = summary?.partial ?? safeClaims.filter(c => c.status === 'partial').length;
+  const unsupported = summary?.unsupported ?? safeClaims.filter(c => c.status === 'unsupported').length;
+  const contradicted = summary?.contradicted ?? safeClaims.filter(c => c.status === 'contradicted').length;
 
   return (
     <div className="space-y-6">

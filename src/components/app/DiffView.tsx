@@ -33,10 +33,15 @@ export const DiffView = ({ original, modified, language }: DiffViewProps) => {
     );
   }
 
-  const { originalSegments, modifiedSegments, stats } = diff;
+  // Defensive destructuring with fallbacks for auth refresh scenarios
+  const { 
+    originalSegments = [], 
+    modifiedSegments = [], 
+    stats = { addedWords: 0, removedWords: 0, unchangedWords: 0, changePercent: 0 } 
+  } = diff || {};
 
   // Check if there are actual changes
-  const hasChanges = stats.addedWords > 0 || stats.removedWords > 0;
+  const hasChanges = (stats?.addedWords ?? 0) > 0 || (stats?.removedWords ?? 0) > 0;
 
   if (!hasChanges) {
     return (
