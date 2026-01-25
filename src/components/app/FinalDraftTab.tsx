@@ -31,14 +31,14 @@ interface FinalDraftTabProps {
 
 export const FinalDraftTab = ({ 
   draftText, 
-  claims, 
-  interventions, 
-  sources, 
+  claims = [], 
+  interventions = [], 
+  sources = [], 
   hasVerified,
   language,
   finalDraft: externalFinalDraft,
   setFinalDraft: externalSetFinalDraft,
-  finalDraftVersions,
+  finalDraftVersions = [],
   setFinalDraftVersions,
 }: FinalDraftTabProps) => {
   const { user } = useAuth();
@@ -81,8 +81,11 @@ export const FinalDraftTab = ({
     }
   }, [user, profile, profileLoading, isAnalyzing, hasVerified, language, autoAnalyzeIfNeeded]);
 
-  const issuesCount = claims.filter(c => c.status !== 'supported').length +
-    interventions.filter(i => !i.hasEvidence || !i.hasRationale).length;
+  // Defensive guards for hydration safety
+  const safeClaims = claims ?? [];
+  const safeInterventions = interventions ?? [];
+  const issuesCount = safeClaims.filter(c => c.status !== 'supported').length +
+    safeInterventions.filter(i => !i.hasEvidence || !i.hasRationale).length;
 
   const handleGenerate = async () => {
     const success = await generateFinalDraft({
@@ -428,14 +431,14 @@ export const FinalDraftTab = ({
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      v{currentVersionIndex + 1}/{versions.length}
+                      v{currentVersionIndex + 1}/{versions?.length ?? 0}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
                       onClick={goToNextVersion}
-                      disabled={currentVersionIndex >= versions.length - 1}
+                      disabled={currentVersionIndex >= (versions?.length ?? 1) - 1}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
