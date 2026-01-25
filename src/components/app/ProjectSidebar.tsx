@@ -121,7 +121,7 @@ export const ProjectSidebar = () => {
                 </TooltipTrigger>
                 <TooltipContent side="right">{t.newProject}</TooltipContent>
               </Tooltip>
-              {projects.map((project) => (
+              {(projects ?? []).map((project) => (
                 <Tooltip key={project.id}>
                   <TooltipTrigger asChild>
                     <Button
@@ -159,7 +159,7 @@ export const ProjectSidebar = () => {
                 </Button>
               </div>
               <CollapsibleContent className="mt-1.5 space-y-0.5">
-                {projects.map((project) => (
+                {(projects ?? []).map((project) => (
                   <div
                     key={project.id}
                     className={cn(
@@ -221,7 +221,7 @@ export const ProjectSidebar = () => {
                           >
                             <Pencil className="h-2.5 w-2.5" />
                           </Button>
-                          {projects.length > 1 && (
+                          {(projects?.length ?? 0) > 1 && (
                             <Button
                               variant="ghost"
                               size="icon"

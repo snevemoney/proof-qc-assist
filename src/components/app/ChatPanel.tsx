@@ -151,7 +151,7 @@ export const ChatPanel = () => {
 
   // Sync streaming content from context to persistent storage
   useEffect(() => {
-    if (streamingMessageIdRef.current && contextMessages.length > 0) {
+    if (streamingMessageIdRef.current && (contextMessages?.length ?? 0) > 0) {
       const lastMessage = contextMessages[contextMessages.length - 1];
       if (lastMessage?.role === 'assistant') {
         updateMessageStreaming(
@@ -165,7 +165,7 @@ export const ChatPanel = () => {
 
   // Finalize streaming message when loading completes
   useEffect(() => {
-    if (!contextLoading && streamingMessageIdRef.current && contextMessages.length > 0) {
+    if (!contextLoading && streamingMessageIdRef.current && (contextMessages?.length ?? 0) > 0) {
       const lastMessage = contextMessages[contextMessages.length - 1];
       if (lastMessage?.role === 'assistant' && !lastMessage.isStreaming) {
         updateMessageStreaming(streamingMessageIdRef.current, lastMessage.content, false);

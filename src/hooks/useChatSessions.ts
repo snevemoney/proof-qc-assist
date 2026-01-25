@@ -88,7 +88,7 @@ export const useChatSessions = (projectId: string | null) => {
               updatedAt: new Date(s.updatedAt),
             }));
             setSessions(loadedSessions);
-            if (loadedSessions.length > 0 && !currentSessionId) {
+            if ((loadedSessions?.length ?? 0) > 0 && !currentSessionId) {
               setCurrentSessionId(loadedSessions[0].id);
             }
           } catch (e) {
@@ -96,7 +96,7 @@ export const useChatSessions = (projectId: string | null) => {
           }
         }
         
-        if (sessions.length === 0) {
+        if ((sessions?.length ?? 0) === 0) {
           const defaultSession: ChatSession = {
             id: `local-session-${Date.now()}`,
             projectId,

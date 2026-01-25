@@ -101,12 +101,12 @@ export const ChatMessage = ({
   // Update display content when message content changes
   useEffect(() => {
     setDisplayContent(message.content);
-    setCurrentVersionIndex(editHistory.length > 0 ? editHistory.length - 1 : 0);
-  }, [message.content, editHistory.length]);
+    setCurrentVersionIndex((editHistory?.length ?? 0) > 0 ? (editHistory?.length ?? 1) - 1 : 0);
+  }, [message.content, editHistory?.length]);
 
   // Load edit history when user clicks to view versions
   const loadEditHistory = async () => {
-    if (!onGetEditHistory || isLoadingHistory || editHistory.length > 0) return;
+    if (!onGetEditHistory || isLoadingHistory || (editHistory?.length ?? 0) > 0) return;
     
     setIsLoadingHistory(true);
     try {
