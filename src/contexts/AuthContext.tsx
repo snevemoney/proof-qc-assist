@@ -75,3 +75,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export { proofCheckLogin, loginPrimitive } from '@/lib/loginPrimitive';
