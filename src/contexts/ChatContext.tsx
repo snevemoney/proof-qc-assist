@@ -3,6 +3,8 @@ import { useLanguage } from './LanguageContext';
 import type { Source, Claim, Intervention, VerificationSummary, RequirementCheck, RubricScore } from '@/lib/verification';
 import type { ArticleResult } from '@/components/app/ArticleSuggestionCard';
 import type { EvaluationCriterion } from '@/lib/evaluationTemplates';
+import { edgeFunctionHeaders, getUserAccessToken } from '@/lib/userAccessToken';
+import { isRetryableStatus, withRetry } from '@/lib/retry';
 
 export interface ChatMessage {
   id: string;
@@ -27,6 +29,7 @@ interface ProjectContextData {
 interface ChatContextType {
   messages: ChatMessage[];
   isLoading: boolean;
+  lastError: string | null;
   isPanelOpen: boolean;
   setIsPanelOpen: (open: boolean) => void;
   sendMessage: (content: string, action?: 'chat' | 'research' | 'find-sources') => Promise<void>;
@@ -55,6 +58,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { language } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [addedArticleIds, setAddedArticleIds] = useState<Set<string>>(new Set());
   const [onAddSourcesCallback, setOnAddSourcesCallback] = useState<((sources: Source[]) => void) | undefined>();
@@ -248,7 +252,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         searchQuery = kwData.meshTerms.length > 0 
           ? kwData.meshTerms.join(` ${kwData.operator} `)
           : kwData.keywords.join(` ${kwData.operator} `);
-      } catch {
+      } catch (parseError) {
+        console.warn('Failed to parse legacy keyword search payload', parseError);
         searchQuery = content.replace('__KEYWORD_SEARCH__', '');
       }
     }
@@ -268,8 +273,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         displayContent = language === 'fr'
           ? `🔬 Recherche PICO:\n• P: ${picoData.population || '—'}\n• I: ${picoData.intervention || '—'}\n• C: ${picoData.comparison || '—'}\n• O: ${picoData.outcome || '—'}`
           : `🔬 PICO Search:\n• P: ${picoData.population || '—'}\n• I: ${picoData.intervention || '—'}\n• C: ${picoData.comparison || '—'}\n• O: ${picoData.outcome || '—'}`;
-      } catch {
-        // Fallback if parsing fails
+      } catch (parseError) {
+        console.warn('Failed to parse legacy PICO search payload', parseError);
         searchQuery = content.replace('__PICO_SEARCH__', '');
       }
     } else if (content === '__AUTO_SEARCH_CONTEXT__' || content === '__AUTO_SEARCH_WEAK_CLAIMS__') {
@@ -325,6 +330,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    setLastError(null);
     setIsLoading(true);
 
     let assistantContent = '';
@@ -352,6 +358,15 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     };
 
     try {
+      const token = await getUserAccessToken();
+      if (!token) {
+        throw new Error(
+          language === 'fr'
+            ? 'Connexion requise pour utiliser le chat.'
+            : 'Sign in is required to use chat.'
+        );
+      }
+
       // If action is find-sources, first search for articles then stream a response
       if (action === 'find-sources') {
         // Search for articles (with defensive guards)
@@ -360,27 +375,30 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           .filter(c => c.status === 'unsupported' || c.status === 'partial')
           .map(c => c.text);
         
-        const searchResp = await fetch(SEARCH_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            query: searchQuery,
-            language,
-            searchMode,
-            keywordData,
-            // Pass full draft text for auto-extraction modes
-            draftText: (searchMode === 'auto-pico' || searchMode === 'auto-keywords') 
-              ? projectContext.draftText 
-              : undefined,
-            context: {
-              draftTopic: (projectContext.draftText ?? '').substring(0, 500),
-              existingSources: (projectContext.sources ?? []).map(s => s.title),
-              unsupportedClaims: unsupportedClaims.slice(0, 5),
-            },
-          }),
+        const searchResp = await withRetry(async () => {
+          const resp = await fetch(SEARCH_URL, {
+            method: 'POST',
+            headers: edgeFunctionHeaders(token),
+            body: JSON.stringify({
+              query: searchQuery,
+              language,
+              searchMode,
+              keywordData,
+              // Pass full draft text for auto-extraction modes
+              draftText: (searchMode === 'auto-pico' || searchMode === 'auto-keywords') 
+                ? projectContext.draftText 
+                : undefined,
+              context: {
+                draftTopic: (projectContext.draftText ?? '').substring(0, 500),
+                existingSources: (projectContext.sources ?? []).map(s => s.title),
+                unsupportedClaims: unsupportedClaims.slice(0, 5),
+              },
+            }),
+          });
+          if (!resp.ok && isRetryableStatus(resp.status)) {
+            throw new Error(`search-articles failed (${resp.status})`);
+          }
+          return resp;
         });
 
         if (searchResp.ok) {
@@ -407,9 +425,19 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(false);
             return;
           }
+        } else {
+          const errorData = await searchResp.json().catch((parseError) => {
+            console.warn('search-articles error body parse failed', parseError);
+            return {};
+          });
+          throw new Error(
+            errorData.error ||
+              (language === 'fr'
+                ? 'La recherche d\'articles a échoué.'
+                : 'Article search failed.')
+          );
         }
         
-        // If search failed or no results, fall back to regular chat
         assistantContent = language === 'fr'
           ? 'Je n\'ai pas pu trouver d\'articles pour cette recherche. Essayez de reformuler votre requête.'
           : 'I couldn\'t find articles for this search. Try rephrasing your query.';
@@ -431,22 +459,28 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         content: m.content,
       }));
 
-      const resp = await fetch(CHAT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          messages: [...chatHistory, { role: 'user', content: displayContent }],
-          context: projectContext,
-          language,
-          action: action === 'research' ? 'research' : 'chat',
-        }),
+      const resp = await withRetry(async () => {
+        const response = await fetch(CHAT_URL, {
+          method: 'POST',
+          headers: edgeFunctionHeaders(token),
+          body: JSON.stringify({
+            messages: [...chatHistory, { role: 'user', content: displayContent }],
+            context: projectContext,
+            language,
+            action: action === 'research' ? 'research' : 'chat',
+          }),
+        });
+        if (!response.ok && isRetryableStatus(response.status)) {
+          throw new Error(`research-chat failed (${response.status})`);
+        }
+        return response;
       });
 
       if (!resp.ok || !resp.body) {
-        const errorData = await resp.json().catch(() => ({}));
+        const errorData = await resp.json().catch((parseError) => {
+          console.warn('research-chat error body parse failed', parseError);
+          return {};
+        });
         throw new Error(errorData.error || 'Failed to start stream');
       }
 
@@ -479,7 +513,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) updateAssistant(content);
-          } catch {
+          } catch (parseError) {
+            console.warn('Incomplete SSE JSON chunk, buffering', parseError);
             textBuffer = line + '\n' + textBuffer;
             break;
           }
@@ -499,7 +534,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) updateAssistant(content);
-          } catch { /* ignore */ }
+          } catch (parseError) {
+            console.warn('Ignoring incomplete trailing SSE chunk', parseError);
+          }
         }
       }
 
@@ -512,6 +549,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error) {
       console.error('Chat error:', error);
+      setLastError(error instanceof Error ? error.message : 'Chat request failed');
       setMessages(prev => [...prev, {
         id: assistantId,
         role: 'assistant',
@@ -560,6 +598,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     <ChatContext.Provider value={{
       messages,
       isLoading,
+      lastError,
       isPanelOpen,
       setIsPanelOpen,
       sendMessage,

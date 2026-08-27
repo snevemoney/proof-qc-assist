@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { VerificationError, classifyError } from './verificationErrors';
+import { withRetry, DEFAULT_RETRY_CONFIG } from './retry';
 
 export interface Source {
   id: string;
@@ -82,64 +83,6 @@ export interface VerificationResult {
   summary: VerificationSummary;
   requirementChecks?: RequirementCheck[];
   rubricScores?: RubricScore[];
-}
-
-// Retry configuration
-interface RetryConfig {
-  maxRetries: number;
-  baseDelayMs: number;
-  maxDelayMs: number;
-}
-
-const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 2,
-  baseDelayMs: 2000,
-  maxDelayMs: 8000,
-};
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  config: RetryConfig = DEFAULT_RETRY_CONFIG,
-  onRetry?: (attempt: number, error: Error, delayMs: number) => void
-): Promise<T> {
-  let lastError: Error = new Error('Unknown error');
-
-  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-
-      // Don't retry non-retryable errors
-      if (error instanceof VerificationError && !error.isRetryable) {
-        throw error;
-      }
-
-      // Don't retry on last attempt
-      if (attempt >= config.maxRetries) {
-        break;
-      }
-
-      // Calculate delay with exponential backoff
-      const delay = Math.min(
-        config.baseDelayMs * Math.pow(2, attempt),
-        config.maxDelayMs
-      );
-
-      // Check if error has a specific retry-after value
-      const retryAfter = (error as VerificationError)?.retryAfterMs;
-      const actualDelay = retryAfter || delay;
-
-      onRetry?.(attempt + 1, lastError, actualDelay);
-      await sleep(actualDelay);
-    }
-  }
-
-  throw lastError;
 }
 
 async function performVerification(

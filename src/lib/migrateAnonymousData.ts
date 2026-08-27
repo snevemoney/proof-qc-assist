@@ -288,7 +288,8 @@ export function hasAnonymousData(): boolean {
   try {
     const projects = JSON.parse(localProjectsJson);
     return Array.isArray(projects) && projects.length > 0;
-  } catch {
+  } catch (parseError) {
+    console.warn('Failed to parse anonymous projects from localStorage', parseError);
     return false;
   }
 }

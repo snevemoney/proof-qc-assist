@@ -41,7 +41,8 @@ export const useChatMessages = (sessionId: string | null) => {
           .eq('session_id', sessionId)
           .eq('user_id', user.id)
           .eq('is_active', true)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: true })
+          .limit(500);
 
         if (error) {
           console.error('Error loading chat messages:', error);
@@ -207,16 +208,15 @@ export const useChatMessages = (sessionId: string | null) => {
 
     if (user) {
       // Mark old message and subsequent messages as inactive
-      const messageIdsToDeactivate = [messageId, ...subsequentMessages.map(m => m.id)];
-      
-      for (const id of messageIdsToDeactivate) {
-        if (!id.startsWith('temp-') && !id.startsWith('local-')) {
-          await supabase
-            .from('chat_messages')
-            .update({ is_active: false })
-            .eq('id', id)
-            .eq('user_id', user.id);
-        }
+      const messageIdsToDeactivate = [messageId, ...subsequentMessages.map(m => m.id)]
+        .filter((id) => !id.startsWith('temp-') && !id.startsWith('local-'));
+
+      if (messageIdsToDeactivate.length > 0) {
+        await supabase
+          .from('chat_messages')
+          .update({ is_active: false })
+          .in('id', messageIdsToDeactivate)
+          .eq('user_id', user.id);
       }
 
       // Insert new edited message

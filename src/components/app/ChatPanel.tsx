@@ -26,6 +26,7 @@ export const ChatPanel = () => {
   const { 
     messages: contextMessages,
     isLoading: contextLoading,
+    lastError,
     sendMessage: sendContextMessage,
     projectContext,
     addedArticleIds,
@@ -440,6 +441,12 @@ export const ChatPanel = () => {
               </div>
             </div>
           </SheetHeader>
+
+          {lastError && (
+            <div className="px-3 py-2 text-sm text-destructive bg-destructive/10 border-b border-destructive/20">
+              {lastError}
+            </div>
+          )}
 
           <ScrollArea className="flex-1" viewportRef={scrollRef}>
             {(messages?.length ?? 0) === 0 ? (

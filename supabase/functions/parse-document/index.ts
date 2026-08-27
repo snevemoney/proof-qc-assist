@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, requireUser, jsonResponse } from "../_shared/auth.ts";
+import { BodyValidationError, parseDocumentBody, readJsonBody } from "../_shared/validate.ts";
 
 interface ParseRequest {
   fileName: string;
@@ -177,19 +174,15 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await requireUser(req);
+    if (auth instanceof Response) return auth;
+
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const { fileName, fileContent, mimeType }: ParseRequest = await req.json();
-
-    if (!fileName || !fileContent) {
-      return new Response(
-        JSON.stringify({ error: 'fileName and fileContent are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { fileName, fileContent, mimeType } = parseDocumentBody(await readJsonBody(req));
 
     console.log(`Parsing document: ${fileName}, mimeType: ${mimeType}`);
 
@@ -234,6 +227,9 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
+    if (error instanceof BodyValidationError) {
+      return jsonResponse({ error: error.message }, 400);
+    }
     console.error('Error parsing document:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to parse document';
     return new Response(

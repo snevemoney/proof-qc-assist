@@ -30,6 +30,8 @@ export const ProjectSidebar = () => {
     createProject,
     renameProject,
     deleteProject,
+    projectsLoading,
+    projectsError,
   } = useProjectContext();
 
   const [collapsed, setCollapsed] = useState(() => {
@@ -104,6 +106,14 @@ export const ProjectSidebar = () => {
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-4">
+          {!collapsed && projectsLoading && (
+            <p className="px-2 text-xs text-muted-foreground">
+              {language === 'fr' ? 'Chargement…' : 'Loading…'}
+            </p>
+          )}
+          {!collapsed && projectsError && (
+            <p className="px-2 text-xs text-destructive">{projectsError}</p>
+          )}
           {/* Projects Section */}
           {collapsed ? (
             // Collapsed view - icons only

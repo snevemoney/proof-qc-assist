@@ -6,11 +6,8 @@ import {
   type SystemKnowledge,
   type SourceQuality 
 } from "../_shared/knowledge.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, requireUser, jsonResponse } from "../_shared/auth.ts";
+import { BodyValidationError, parseVerifyBody, readJsonBody } from "../_shared/validate.ts";
 
 interface Source {
   id: string;
@@ -169,21 +166,16 @@ serve(async (req) => {
   }
 
   try {
-    const { sources, draftText, strictMode, language, instructions, evaluationGrid }: VerifyRequest = await req.json();
+    const auth = await requireUser(req);
+    if (auth instanceof Response) return auth;
 
-    if (!sources || sources.length === 0) {
-      return new Response(
-        JSON.stringify({ error: language === 'fr' ? "Aucune source fournie" : "No sources provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!draftText || draftText.trim().length === 0) {
-      return new Response(
-        JSON.stringify({ error: language === 'fr' ? "Aucun texte de brouillon fourni" : "No draft text provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const parsed = parseVerifyBody(await readJsonBody(req));
+    const sources = parsed.sources as VerifyRequest["sources"];
+    const draftText = parsed.draftText;
+    const strictMode = parsed.strictMode;
+    const language = parsed.language;
+    const instructions = parsed.instructions;
+    const evaluationGrid = parsed.evaluationGrid as VerifyRequest["evaluationGrid"];
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -197,7 +189,9 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
       
       if (supabaseUrl && supabaseKey) {
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+          global: { headers: { Authorization: auth.authHeader } },
+        });
         
         // Detect topics from draft
         const detectedTopics = detectTopicFromText(draftText);
@@ -555,6 +549,9 @@ ${language === 'fr' ? 'Analysez le brouillon et identifiez chaque affirmation v√
     );
 
   } catch (error) {
+    if (error instanceof BodyValidationError) {
+      return jsonResponse({ error: error.message }, 400);
+    }
     console.error("Verification error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error occurred" }),

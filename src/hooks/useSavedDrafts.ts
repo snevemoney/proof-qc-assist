@@ -26,7 +26,8 @@ export const useSavedDrafts = () => {
           .from('saved_drafts')
           .select('*')
           .eq('user_id', user.id)
-          .order('updated_at', { ascending: false });
+          .order('updated_at', { ascending: false })
+          .limit(100);
 
         if (error) throw error;
 
