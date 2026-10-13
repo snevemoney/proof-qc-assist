@@ -17,6 +17,7 @@ export const useProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load projects
   useEffect(() => {
@@ -24,16 +25,19 @@ export const useProjects = () => {
 
     const loadProjects = async () => {
       setIsLoading(true);
+      setError(null);
 
       if (user) {
         const { data, error } = await supabase
           .from('projects')
           .select('id, name, created_at, updated_at')
           .eq('user_id', user.id)
-          .order('updated_at', { ascending: false });
+          .order('updated_at', { ascending: false })
+          .limit(100);
 
         if (error) {
           console.error('Error loading projects:', error);
+          setError(error.message);
         }
 
         if (data && data.length > 0) {
@@ -240,5 +244,6 @@ export const useProjects = () => {
     renameProject,
     deleteProject,
     isLoading: isLoading || authLoading,
+    error,
   };
 };

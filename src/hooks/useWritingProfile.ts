@@ -27,6 +27,7 @@ export const useWritingProfile = () => {
   const [profile, setProfile] = useState<WritingProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const lastAnalysisRef = useRef<number>(0);
 
   // Fetch the user's writing profile
@@ -38,6 +39,7 @@ export const useWritingProfile = () => {
     }
 
     try {
+      setError(null);
       const { data, error } = await supabase
         .from('user_writing_profiles')
         .select('*')
@@ -46,6 +48,7 @@ export const useWritingProfile = () => {
 
       if (error) {
         console.error('Error fetching writing profile:', error);
+        setError(error.message);
         return;
       }
 
@@ -61,6 +64,7 @@ export const useWritingProfile = () => {
       }
     } catch (error) {
       console.error('Error fetching writing profile:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load writing profile');
     } finally {
       setIsLoading(false);
     }
@@ -77,6 +81,7 @@ export const useWritingProfile = () => {
     }
 
     setIsAnalyzing(true);
+    setError(null);
     lastAnalysisRef.current = now;
 
     try {
@@ -86,11 +91,13 @@ export const useWritingProfile = () => {
 
       if (error) {
         console.error('Error analyzing writing style:', error);
+        setError(error.message);
         return false;
       }
 
       if (data?.error) {
         console.error('Analysis error:', data.error);
+        setError(data.error);
         return false;
       }
 
@@ -99,6 +106,7 @@ export const useWritingProfile = () => {
       return true;
     } catch (error) {
       console.error('Error analyzing writing style:', error);
+      setError(error instanceof Error ? error.message : 'Analysis failed');
       return false;
     } finally {
       setIsAnalyzing(false);
@@ -148,6 +156,7 @@ export const useWritingProfile = () => {
     profile,
     isLoading,
     isAnalyzing,
+    error,
     analyzeStyle,
     autoAnalyzeIfNeeded,
     deleteProfile,

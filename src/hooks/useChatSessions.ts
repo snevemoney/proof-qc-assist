@@ -31,7 +31,8 @@ export const useChatSessions = (projectId: string | null) => {
           .select('id, project_id, name, created_at, updated_at')
           .eq('project_id', projectId)
           .eq('user_id', user.id)
-          .order('updated_at', { ascending: false });
+          .order('updated_at', { ascending: false })
+          .limit(100);
 
         if (error) {
           console.error('Error loading chat sessions:', error);

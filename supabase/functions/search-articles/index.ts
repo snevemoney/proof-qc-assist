@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, requireUser, jsonResponse } from "../_shared/auth.ts";
+import { BodyValidationError, parseSearchBody, readJsonBody } from "../_shared/validate.ts";
 
 interface SearchRequest {
   query: string;
@@ -332,7 +329,17 @@ serve(async (req) => {
   }
   
   try {
-    const { query, language, context, filters, searchMode, keywordData, draftText }: SearchRequest = await req.json();
+    const auth = await requireUser(req);
+    if (auth instanceof Response) return auth;
+
+    const parsed = parseSearchBody(await readJsonBody(req));
+    const query = parsed.query;
+    const language = parsed.language;
+    const context = parsed.context as SearchRequest["context"];
+    const filters = parsed.filters as SearchRequest["filters"];
+    const searchMode = parsed.searchMode as SearchRequest["searchMode"];
+    const keywordData = parsed.keywordData as SearchRequest["keywordData"];
+    const draftText = parsed.draftText;
     
     const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
     if (!PERPLEXITY_API_KEY) {
@@ -710,6 +717,9 @@ Return a JSON object with this structure:
     });
     
   } catch (error) {
+    if (error instanceof BodyValidationError) {
+      return jsonResponse({ error: error.message }, 400);
+    }
     console.error('search-articles error:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error' 

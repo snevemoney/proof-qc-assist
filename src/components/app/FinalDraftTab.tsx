@@ -45,7 +45,8 @@ export const FinalDraftTab = ({
   const { 
     profile, 
     isLoading: profileLoading, 
-    isAnalyzing, 
+    isAnalyzing,
+    error: styleError,
     analyzeStyle,
     autoAnalyzeIfNeeded 
   } = useWritingProfile();
@@ -152,8 +153,8 @@ export const FinalDraftTab = ({
     } else {
       toast.error(
         language === 'fr' 
-          ? 'Erreur lors de l\'analyse. Assurez-vous d\'avoir des brouillons sauvegardés.' 
-          : 'Analysis error. Make sure you have saved drafts.'
+          ? 'Erreur lors de l\'analyse. Connectez-vous et assurez-vous d\'avoir des brouillons sauvegardés.' 
+          : 'Analysis error. Sign in and make sure you have saved drafts.'
       );
     }
   };
@@ -205,6 +206,22 @@ export const FinalDraftTab = ({
             <div className="flex items-center justify-center">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (styleError && !profileData) {
+      return (
+        <Card className="border-destructive/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              {language === 'fr' ? 'Profil d\'écriture' : 'Writing Profile'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-destructive">{styleError}</p>
           </CardContent>
         </Card>
       );

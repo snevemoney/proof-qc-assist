@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Source, Claim, Intervention } from '@/lib/verification';
+import { isRetryableStatus, withRetry } from '@/lib/retry';
 
 export interface GenerateFinalDraftParams {
   draftText: string;
@@ -61,7 +62,8 @@ export const useFinalDraft = (options: UseFinalDraftOptions) => {
         return false;
       }
 
-      const response = await fetch(
+      const response = await withRetry(async () => {
+        const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-final-draft`,
         {
           method: 'POST',
@@ -98,10 +100,18 @@ export const useFinalDraft = (options: UseFinalDraftOptions) => {
             previousVersion: params.previousVersion,
           }),
         }
-      );
+        );
+        if (!resp.ok && isRetryableStatus(resp.status)) {
+          throw new Error(`generate-final-draft failed (${resp.status})`);
+        }
+        return resp;
+      });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch((parseError) => {
+          console.warn('generate-final-draft error body parse failed', parseError);
+          return {};
+        });
         setError(errorData.error || 'Failed to generate final draft');
         return false;
       }
@@ -148,8 +158,8 @@ export const useFinalDraft = (options: UseFinalDraftOptions) => {
               fullText += content;
               setFinalDraft(fullText);
             }
-          } catch {
-            // Incomplete JSON split across chunks - put it back and wait for more data
+          } catch (parseError) {
+            console.warn('Incomplete generate-final-draft SSE chunk, buffering', parseError);
             textBuffer = line + '\n' + textBuffer;
             break;
           }
@@ -174,8 +184,8 @@ export const useFinalDraft = (options: UseFinalDraftOptions) => {
               fullText += content;
               setFinalDraft(fullText);
             }
-          } catch {
-            // Ignore incomplete data at the end
+          } catch (parseError) {
+            console.warn('Ignoring incomplete trailing generate-final-draft SSE chunk', parseError);
           }
         }
       }

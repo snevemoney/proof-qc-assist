@@ -14,6 +14,7 @@ interface ProjectContextType {
   renameProject: (projectId: string, newName: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   projectsLoading: boolean;
+  projectsError: string | null;
   
   // Chat Sessions
   sessions: ChatSession[];
@@ -44,6 +45,7 @@ export const ProjectContextProvider = ({ children }: { children: ReactNode }) =>
     renameProject,
     deleteProject,
     isLoading: projectsLoading,
+    error: projectsError,
   } = useProjects();
 
   const {
@@ -74,6 +76,7 @@ export const ProjectContextProvider = ({ children }: { children: ReactNode }) =>
       renameProject,
       deleteProject,
       projectsLoading,
+      projectsError,
       sessions,
       currentSession,
       currentSessionId,

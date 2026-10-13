@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, requireUser, jsonResponse } from "../_shared/auth.ts";
+import { BodyValidationError, parseAnalyzeBody, readJsonBody } from "../_shared/validate.ts";
 
 interface WritingProfile {
   vocabulary_level: string;
@@ -30,30 +27,17 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization required' }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const auth = await requireUser(req);
+    if (auth instanceof Response) return auth;
+    const { user, authHeader } = auth;
 
-    const { language = 'fr' }: AnalyzeRequest = await req.json();
+    const { language } = parseAnalyzeBody(await readJsonBody(req));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } }
     });
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication failed' }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Collect writing samples from multiple sources
     const writingSamples: string[] = [];
@@ -236,6 +220,9 @@ Return ONLY valid JSON with this exact structure:
     );
 
   } catch (error: unknown) {
+    if (error instanceof BodyValidationError) {
+      return jsonResponse({ error: error.message }, 400);
+    }
     console.error('Error in analyze-writing-style:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return new Response(

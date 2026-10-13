@@ -6,11 +6,8 @@ import {
   type SystemKnowledge,
   type SourceQuality 
 } from "../_shared/knowledge.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, requireUser, jsonResponse } from "../_shared/auth.ts";
+import { BodyValidationError, parseChatBody, readJsonBody } from "../_shared/validate.ts";
 
 interface Source {
   id: string;
@@ -368,7 +365,21 @@ serve(async (req) => {
   }
   
   try {
-    const { messages, context, language, action, claimId }: ChatRequest = await req.json();
+    const auth = await requireUser(req);
+    if (auth instanceof Response) return auth;
+
+    const parsed = parseChatBody(await readJsonBody(req));
+    const messages = parsed.messages as ChatRequest["messages"];
+    const context = {
+      sources: [],
+      draftText: "",
+      claims: [],
+      summary: null,
+      ...(parsed.context ?? {}),
+    } as ChatRequest["context"];
+    const language = parsed.language;
+    const action = (parsed.action === "research" ? "research" : "chat") as ChatRequest["action"];
+    const claimId = parsed.claimId;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -382,7 +393,9 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
       
       if (supabaseUrl && supabaseKey) {
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+          global: { headers: { Authorization: auth.authHeader } },
+        });
         
         // Detect topics from draft or last message
         const textForTopics = context.draftText || messages[messages.length - 1]?.content || '';
@@ -485,6 +498,9 @@ serve(async (req) => {
     });
     
   } catch (error) {
+    if (error instanceof BodyValidationError) {
+      return jsonResponse({ error: error.message }, 400);
+    }
     console.error('research-chat error:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error' 

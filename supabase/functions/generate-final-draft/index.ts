@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, requireUser, jsonResponse } from "../_shared/auth.ts";
+import { BodyValidationError, parseGenerateBody, readJsonBody } from "../_shared/validate.ts";
 
 interface Source {
   id: string;
@@ -61,37 +58,24 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization required' }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const auth = await requireUser(req);
+    if (auth instanceof Response) return auth;
+    const { user, authHeader } = auth;
 
-    const { draftText, claims, interventions, sources, language, feedback, previousVersion }: GenerateRequest = await req.json();
-
-    if (!draftText || draftText.trim().length === 0) {
-      return new Response(
-        JSON.stringify({ error: language === 'fr' ? 'Aucun brouillon fourni' : 'No draft provided' }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const parsed = parseGenerateBody(await readJsonBody(req));
+    const draftText = parsed.draftText;
+    const claims = parsed.claims as GenerateRequest["claims"];
+    const interventions = parsed.interventions as GenerateRequest["interventions"];
+    const sources = parsed.sources as GenerateRequest["sources"];
+    const language = parsed.language;
+    const feedback = parsed.feedback;
+    const previousVersion = parsed.previousVersion;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } }
     });
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication failed' }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Fetch user's writing profile
     const { data: profileData } = await supabase
@@ -312,6 +296,9 @@ Return the corrected draft preserving the student's style.`;
     });
 
   } catch (error: unknown) {
+    if (error instanceof BodyValidationError) {
+      return jsonResponse({ error: error.message }, 400);
+    }
     console.error('Error in generate-final-draft:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return new Response(

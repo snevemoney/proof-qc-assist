@@ -39,8 +39,8 @@ function parseArticlesFromContent(content: string): {
         articles = [...articles, ...parsed.articles];
         textContent = textContent.replace(match[0], '');
       }
-    } catch {
-      // Ignore parse errors
+    } catch (parseError) {
+      console.warn('Failed to parse article JSON block', parseError);
     }
   }
   
@@ -55,8 +55,8 @@ function parseArticlesFromContent(content: string): {
         articles = [...articles, ...parsed.articles];
       }
       textContent = textContent.replace(match[0], '');
-    } catch {
-      // Ignore parse errors
+    } catch (parseError) {
+      console.warn('Failed to parse marked article block', parseError);
     }
   }
   

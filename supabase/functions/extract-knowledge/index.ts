@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, requireExtractKnowledgeAuth } from "../_shared/auth.ts";
 
 interface Claim {
   id: string;
@@ -107,6 +103,9 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await requireExtractKnowledgeAuth(req);
+    if (auth instanceof Response) return auth;
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -121,7 +120,8 @@ serve(async (req) => {
         id, claims, sources_snapshot, interventions, summary, draft_text, created_at,
         user_id
       `)
-      .gte('created_at', oneDayAgo);
+      .gte('created_at', oneDayAgo)
+      .limit(200);
 
     if (fetchError) {
       throw new Error(`Failed to fetch verifications: ${fetchError.message}`);
@@ -138,7 +138,8 @@ serve(async (req) => {
     const { data: optedInProfiles } = await supabase
       .from('profiles')
       .select('id')
-      .eq('share_anonymized_data', true);
+      .eq('share_anonymized_data', true)
+      .limit(1000);
     
     const optedInUserIds = new Set(optedInProfiles?.map(p => p.id) || []);
     const eligibleVerifications = verifications.filter(v => optedInUserIds.has(v.user_id));
